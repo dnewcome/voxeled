@@ -24,7 +24,7 @@ const scene = generateScene({
 });
 const sceneJSON = JSON.stringify(scene);
 
-const patternName = process.env.VOX_PATTERN || "planeSweep";
+const patternName = process.env.VOX_PATTERN || "ribbonChase";
 const patternFactory = PATTERNS[patternName];
 if (!patternFactory) {
   console.error(`unknown pattern "${patternName}". options: ${Object.keys(PATTERNS).join(", ")}`);

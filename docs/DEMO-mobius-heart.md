@@ -27,7 +27,7 @@ Knobs (env vars):
 
 | var | default | effect |
 |---|---|---|
-| `VOX_PATTERN` | `planeSweep` | `planeSweep` \| `ribbonChase` \| `normalShade` |
+| `VOX_PATTERN` | `ribbonChase` | `ribbonChase` \| `planeSweep` \| `normalRGB` |
 | `VOX_TWIST` | `mobius` | `mobius` \| `cookie-cutter` \| `flat-full` |
 | `VOX_PANELS` | `8` | panels per side (sets the size) |
 | `VOX_PITCH` | `10` | demo pixel pitch in mm (smaller = more pixels) |
@@ -68,12 +68,13 @@ both land in the same scene shape (`position + normal + address`).
 
 ## The three patterns
 
-- **`planeSweep`** — a plane of light rising at a real speed (mm/s), purely world-space. Proves
-  the animation is *spatial*, reading correctly across the non-flat, twisting ribbon.
-- **`ribbonChase`** — a hue chase in ribbon-arclength `s`; watch it flow around and come back on
-  the far side via the twist.
-- **`normalShade`** — shades each pixel by how much its normal faces the camera. This exists to
-  *prove the map*: with correct normals, front faces glow and back faces fall dark as it turns.
+- **`ribbonChase`** (default) — a hue chase in ribbon-arclength `s`; watch it flow around and come
+  back on the far side via the Möbius twist.
+- **`planeSweep`** — planes of light rising at a real speed (mm/s), repeating so a band is always
+  on the piece. Purely world-space — proves the animation is *spatial*, reading correctly across
+  the non-flat, twisting ribbon.
+- **`normalRGB`** — paints each pixel's emission normal as colour (x,y,z → r,g,b). Always lit; the
+  colour field you see *is* the emission-direction field — the direct visual proof the map is right.
 
 ## Driving the real piece
 

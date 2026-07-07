@@ -65,7 +65,9 @@ addEventListener("resize", () => {
 });
 
 let mesh = null, normalsLines = null, N = 0;
-const OFF = new THREE.Color(0x0a0a12);
+// Dim idle colour so the heart's shape is faintly visible even before any frame arrives —
+// lets you tell "geometry didn't load" apart from "no frames on the bus".
+const OFF = new THREE.Color(0x1a2138);
 
 async function boot() {
   const scene = await (await fetch("scene.json")).json();
