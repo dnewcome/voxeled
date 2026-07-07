@@ -8,7 +8,18 @@ Drive real fixtures from *spatial* animations authored in **real-world units** �
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **Status: early design.** No runtime yet — this repo is the vision and the architecture. The first slice being built is the *spine*: a scene file → a hub that runs one spatial pattern → a WebGL preview and a real strip over DDP/Art-Net, lit by identical frames. Code examples below are **illustrative** of the intended design, not yet implemented. Watch/star to follow along.
+> **Status: Phase 0 — the spine runs.** A working demo maps and drives the [Möbius LED Heart](https://github.com/dnewcome/mobius-led-heart): a scene → a hub running one spatial pattern → a WebGL preview *and* Art-Net/DDP output, all from identical frames (`npm run demo`; verified by 17 headless checks). This is an early slice, not a finished product — the stable format, the importers, and the automapper are still ahead. The longer-horizon code samples further down are marked **illustrative**. Watch/star to follow along.
+
+## Try it — Möbius LED Heart
+
+The first working slice maps and drives a real piece, the [Möbius LED Heart](https://github.com/dnewcome/mobius-led-heart):
+
+```bash
+node examples/mobius-heart/run.mjs      # or: npm run demo   (Node ≥18, no dependencies)
+# open http://localhost:8080  ·  press N to see normals  ·  VOX_PATTERN=ribbonChase for the twist chase
+```
+
+Because the heart is generated from a parametric ribbon, voxeled maps it by *evaluating that parametrization* — every LED gets an exact position **and** emission normal (`F = T × D`), no camera scan needed. The hub runs a world-space pattern and streams identical frames to the browser preview and out to real fixtures over Art-Net/DDP (`ARTNET=host DDP=host …`). Full walkthrough: [`docs/DEMO-mobius-heart.md`](docs/DEMO-mobius-heart.md).
 
 ---
 

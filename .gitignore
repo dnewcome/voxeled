@@ -37,3 +37,6 @@ Thumbs.db
 *.mov
 scans/
 captures/
+
+# Generated scenes (regenerate with `npm run map`)
+*.vxl.json

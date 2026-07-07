@@ -1,0 +1,13 @@
+{
+  "name": "voxeled",
+  "version": "0.0.1",
+  "description": "Open, integration-friendly volumetric LED show control.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Dan Newcome",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "demo": "node examples/mobius-heart/run.mjs",
+    "map": "node examples/mobius-heart/map.mjs"
+  }
+}
