@@ -16,10 +16,10 @@ The first working slice maps and drives a real piece, the [Möbius LED Heart](ht
 
 ```bash
 node examples/mobius-heart/run.mjs      # or: npm run demo   (Node ≥18, no dependencies)
-# open http://localhost:8080  ·  press N to see normals  ·  VOX_PATTERN=ribbonChase for the twist chase
+# open http://localhost:8080  ·  drag the crossfader  ·  press N for normals
 ```
 
-Because the heart is generated from a parametric ribbon, voxeled maps it by *evaluating that parametrization* — every LED gets an exact position **and** emission normal (`F = T × D`), no camera scan needed. The hub runs a world-space pattern and streams identical frames to the browser preview and out to real fixtures over Art-Net/DDP (`ARTNET=host DDP=host …`). Full walkthrough: [`docs/DEMO-mobius-heart.md`](docs/DEMO-mobius-heart.md).
+Because the heart is generated from a parametric ribbon, voxeled maps it by *evaluating that parametrization* — every LED gets an exact position **and** emission normal (`F = T × D`), no camera scan needed. The default demo places **two hearts 10 ft apart** in one world space and **auto-crossfades a show** across them — including a wipe that accounts for the real gap between them (world space) and a synced version that ignores it (fixture space). Identical frames drive the browser preview and real fixtures over Art-Net/DDP (`ARTNET=host DDP=host …`). Full walkthrough: [`docs/DEMO-mobius-heart.md`](docs/DEMO-mobius-heart.md).
 
 ---
 

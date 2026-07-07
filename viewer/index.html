@@ -21,6 +21,15 @@
   #hud .row span:last-child { color: #eef3ff; font-variant-numeric: tabular-nums; }
   #hud .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffcf4d; margin-right:6px; }
   #hud .dot.live { background:#69e08f; }
+  #hud hr { border: none; border-top: 1px solid rgba(120,150,210,0.16); margin: 10px 0 8px; }
+  #xf .lbl { display:flex; justify-content:space-between; gap:8px; font-size:11px; margin-bottom:5px; }
+  #xf .lbl b { color:#eef3ff; font-weight:600; }
+  #xf .lbl .a { color:#ff8fb0; } #xf .lbl .b { color:#8fd0ff; }
+  #xf input[type=range] { width:100%; accent-color:#ff5e87; margin:2px 0 8px; }
+  #xf button { width:100%; cursor:pointer; font-size:11.5px; color:#dfe6f3;
+    background:rgba(120,150,210,0.14); border:1px solid rgba(120,150,210,0.3);
+    border-radius:8px; padding:5px 8px; }
+  #xf button.on { background:#ff5e87; border-color:#ff5e87; color:#1a0410; font-weight:700; }
   #help { position: fixed; bottom: 10px; left: 12px; z-index: 10; color: #56688a; font-size: 11px; }
 </style>
 <script type="importmap">
@@ -34,11 +43,18 @@
 <div id="hud">
   <h1>♥ voxeled viewer</h1>
   <div class="row"><span>Scene</span><span id="h-name">—</span></div>
+  <div class="row"><span>Instances</span><span id="h-inst">—</span></div>
   <div class="row"><span>Pixels</span><span id="h-count">—</span></div>
   <div class="row"><span>Bus</span><span id="h-bus"><span class="dot" id="h-dot"></span>waiting…</span></div>
   <div class="row"><span>Frames/s</span><span id="h-fps">—</span></div>
+  <hr/>
+  <div id="xf">
+    <div class="lbl"><span class="a">◂ <b id="xf-a">A</b></span><span class="b"><b id="xf-b">B</b> ▸</span></div>
+    <input id="xf-slider" type="range" min="0" max="1" step="0.005" value="0" />
+    <button id="xf-auto" class="on">⟳ Auto-crossfade</button>
+  </div>
 </div>
-<div id="help">drag orbit · scroll zoom · <b>N</b> toggle normals</div>
+<div id="help">drag orbit · scroll zoom · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
 
 <script type="module">
 import * as THREE from "three";
@@ -75,6 +91,10 @@ async function boot() {
   N = px.length;
   $("h-name").textContent = scene.name;
   $("h-count").textContent = N.toLocaleString();
+  $("h-inst").textContent = scene.meta?.instances?.length ?? 1;
+  const show = scene.meta?.show;
+  if (show?.scenes?.length >= 2) { $("xf-a").textContent = show.scenes[0]; $("xf-b").textContent = show.scenes[1]; }
+  if (show?.single) document.getElementById("xf").style.opacity = 0.35;
 
   // Bounds → LED size + camera framing.
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -143,8 +163,32 @@ function connectBus() {
   };
 }
 
+// ── crossfade control → hub /control ─────────────────────────────────────────
+const slider = $("xf-slider"), autoBtn = $("xf-auto");
+let lastSend = 0, pendingT = null;
+function sendControl(qs) {
+  const now = performance.now();
+  if (now - lastSend < 60) { clearTimeout(pendingT); pendingT = setTimeout(() => sendControl(qs), 60); return; }
+  lastSend = now;
+  fetch("/control?" + qs).catch(() => {});
+}
+function goManual() {
+  autoBtn.classList.remove("on");
+  sendControl(`mode=manual&a=0&b=1&fader=${slider.value}`);
+}
+slider.addEventListener("input", goManual);
+autoBtn.addEventListener("click", () => {
+  const on = !autoBtn.classList.contains("on");
+  autoBtn.classList.toggle("on", on);
+  if (on) sendControl("mode=auto"); else goManual();
+});
+
 addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "n" && normalsLines) normalsLines.visible = !normalsLines.visible;
+  const k = e.key.toLowerCase();
+  if (k === "n" && normalsLines) normalsLines.visible = !normalsLines.visible;
+  else if (k === "[") { slider.value = Math.max(0, +slider.value - 0.05); goManual(); }
+  else if (k === "]") { slider.value = Math.min(1, +slider.value + 0.05); goManual(); }
+  else if (k === "a") autoBtn.click();
 });
 
 function loop() {

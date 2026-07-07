@@ -45,4 +45,21 @@ export function normalRGB() {
   return (px) => [(px.n[0] + 1) / 2, (px.n[1] + 1) / 2, (px.n[2] + 1) / 2];
 }
 
-export const PATTERNS = { ribbonChase, planeSweep, normalRGB };
+// A plane of light wiping along a world axis — the multi-instance showcase, and where the
+// "account for distance" toggle lives:
+//   space:'world'   → samples the pixel's WORLD position. One wave crosses instance A, then the
+//                     real empty gap between instances (dark, taking real time), then instance B.
+//                     The 10-ft spacing is physically accounted for.
+//   space:'fixture' → samples the pixel's FIXTURE-LOCAL position (via ctx.local). Every instance
+//                     shows the identical wave in sync; the distance between them is ignored.
+export function worldWipe({ axis = 0, speedMM = 700, spacingMM = 1600, widthMM = 300, space = "world", hue = 0.33 } = {}) {
+  return (px, t, ctx) => {
+    const pos = space === "fixture" && ctx?.local ? ctx.local(px) : px.p;
+    const u = (pos[axis] - t * speedMM) / spacingMM;
+    const f = u - Math.floor(u);
+    const d = Math.min(f, 1 - f) * spacingMM;
+    return hsv(hue, 0.9, clamp01(Math.exp(-((d / widthMM) ** 2))));
+  };
+}
+
+export const PATTERNS = { ribbonChase, worldWipe, planeSweep, normalRGB };

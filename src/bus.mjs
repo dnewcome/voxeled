@@ -33,9 +33,10 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [] } = {}) {
   const clients = new Set();
 
   const server = http.createServer((req, res) => {
-    const url = req.url.split("?")[0];
-    const route = routes.find((r) => r.path === url);
+    const u = new URL(req.url, "http://localhost");
+    const route = routes.find((r) => r.path === u.pathname);
     if (!route) { res.writeHead(404); res.end("not found"); return; }
+    if (route.handler) { route.handler(req, res, u.searchParams); return; } // control endpoints
     let body;
     try {
       body = route.content != null ? route.content : readFileSync(route.file);
@@ -76,6 +77,7 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [] } = {}) {
   return {
     broadcast,
     clients,
+    server,
     url: `http://localhost:${port}/`,
     close: () => { for (const s of clients) s.destroy(); server.close(); },
   };
