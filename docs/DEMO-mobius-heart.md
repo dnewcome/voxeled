@@ -52,8 +52,12 @@ Shortcuts (Makefile, same as the `npm run demo:*` scripts):
 ```bash
 make grid        # 3×3 matrix        make demo     # default two-hearts
 make facing      # 4 rotated hearts  make test     # full suite + render gate
-make stop        # free port 8080    make restart  # stop + demo
+make export      # → build/*.glb     make stop     # free port 8080
 ```
+
+Export the map for other tools — `make export LAYOUT=examples/mobius-heart/layouts/grid-3x3.yaml`
+writes a glTF `.glb` (opens in Blender / TouchDesigner / three.js) + the canonical `.vxl.json`.
+See [`FORMAT.md`](FORMAT.md) for the scene format and glTF mapping.
 
 Just the map (programmatic, writes a scene file):
 
@@ -186,9 +190,12 @@ examples/mobius-heart/
   heart.mjs   port of heart_path.py + the ribbon frame (F = T × D); samples a heart fixture
   map.mjs     place N instances → a voxeled scene/rig (the "map"); also a CLI
   run.mjs     the full demo: load YAML layout → crossfading show → bus + senders (the "drive")
+  export.mjs  export a layout to glTF (.glb) + .vxl.json for interchange
+  fixtures.mjs  fixture-type registry (mobius-heart), shared by run + export
   layouts/    YAML layout files — two-hearts.yaml (default), grid-3x3.yaml, facing-hearts.yaml
 src/
   format.mjs  .vxl scene v0 (build/save/load/bounds)
+  io/gltf.mjs  glTF (.glb) exporter — the map travels to Blender / TouchDesigner / three.js
   yaml.mjs    dependency-free YAML-subset parser (layout files)
   layout.mjs  buildSceneFromLayout + resolveLayout (parsed YAML doc → scene + show)
   patterns.mjs  spatial patterns: ribbonChase, worldWipe (world/fixture), planeSweep, normalRGB

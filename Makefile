@@ -5,7 +5,7 @@ NODE := node
 RUN  := examples/mobius-heart/run.mjs
 
 .DEFAULT_GOAL := help
-.PHONY: help demo grid facing test map stop restart clean
+.PHONY: help demo grid facing test map export stop restart clean
 
 help: ## Show this help
 	@echo "voxeled — targets:"
@@ -27,6 +27,9 @@ test: ## Run the full test suite (logic + headless-Chrome render gate)
 
 map: ## Generate a scene file from the mapper — e.g. make map ARGS="--hearts 3 --pitch 8"
 	$(NODE) examples/mobius-heart/map.mjs $(ARGS)
+
+export: ## Export a layout to glTF + .vxl.json → build/ (LAYOUT=path, default two-hearts)
+	$(NODE) examples/mobius-heart/export.mjs $(LAYOUT)
 
 stop: ## Free the demo port (kills whatever holds PORT)
 	@fuser -k $(PORT)/tcp 2>/dev/null || lsof -ti tcp:$(PORT) | xargs -r kill 2>/dev/null || true

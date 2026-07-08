@@ -94,6 +94,8 @@ mesh = "arches.glb#LeftArch"          # reuse imported geometry, don't redraw it
 
 Each pixel resolves to, at minimum, **`position + normal + address`**. The normal is a first-class field — carried through glTF as the standard `NORMAL` attribute / USD `normals` primvar so it survives round-trips.
 
+The format is documented in [`docs/FORMAT.md`](docs/FORMAT.md), and any scene **exports to glTF today** (`make export`): the map opens as named point-cloud objects, at real-world scale with normals + a baked look, in Blender / TouchDesigner / three.js — verified by loading it back through a standard glTF loader.
+
 A pattern is a spatial function, not a per-index loop:
 
 ```js

@@ -38,8 +38,9 @@ Thumbs.db
 scans/
 captures/
 
-# Generated scenes (regenerate with `npm run map`)
+# Generated scenes + exports (regenerate with `npm run map` / `make export`)
 *.vxl.json
+/build/
 
 # Test artifacts (screenshots, chrome profile)
 test/artifacts/

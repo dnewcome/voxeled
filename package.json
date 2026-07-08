@@ -11,6 +11,7 @@
     "demo:grid": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/grid-3x3.yaml",
     "demo:facing": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/facing-hearts.yaml",
     "map": "node examples/mobius-heart/map.mjs",
+    "export": "node examples/mobius-heart/export.mjs",
     "test": "node test/run.mjs"
   }
 }

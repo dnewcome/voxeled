@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseYAML } from "../../src/yaml.mjs";
 import { resolveLayout } from "../../src/layout.mjs";
-import { sampleHeart } from "./heart.mjs";
+import { FIXTURES } from "./fixtures.mjs";
 import { createBus } from "../../src/bus.mjs";
 import { createHub } from "../../src/hub.mjs";
 import { createShow } from "../../src/mixer.mjs";
@@ -21,9 +21,6 @@ import { createDDPSender } from "../../src/senders/ddp.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
-
-// Fixture-type registry: how a layout's `type:` becomes geometry. Add new fixtures here.
-const FIXTURES = { "mobius-heart": (params) => sampleHeart(params) };
 
 // Load + resolve the layout file into a scene (the rig) and a show (the scenes).
 // Layout: first CLI arg (e.g. `node run.mjs path/to.yaml`), else VOX_LAYOUT, else two-hearts.
