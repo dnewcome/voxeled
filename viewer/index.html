@@ -134,9 +134,16 @@ async function boot() {
   normalsLines.visible = false;
   scene3.add(normalsLines);
 
-  // Frame the camera.
+  // Ground grid at the scene's floor (min Y) so the pieces read as standing on the ground plane.
+  const gspan = Math.max(hi[0] - lo[0], hi[2] - lo[2]) * 1.6;
+  const gdiv = Math.max(6, Math.min(40, Math.round(gspan / 500)));
+  const ground = new THREE.GridHelper(gspan, gdiv, 0x33436b, 0x172036);
+  ground.position.set(center.x, lo[1], center.z);
+  scene3.add(ground);
+
+  // Elevated 3/4 camera so the ground plane and depth read (works for walls too).
   camera.up.set(0, 1, 0);
-  camera.position.set(center.x, center.y, center.z + diag * 1.1);
+  camera.position.set(center.x + diag * 0.1, center.y + diag * 0.4, center.z + diag * 1.15);
   controls.target.copy(center);
   controls.update();
 

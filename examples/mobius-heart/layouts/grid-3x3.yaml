@@ -1,7 +1,9 @@
-# voxeled layout — a 3×3 matrix of Möbius hearts in one shared world space.
-#   run with:  VOX_LAYOUT=examples/mobius-heart/layouts/grid-3x3.yaml npm run demo
-# Hearts are ~1277 mm wide × 1109 mm tall; grid pitch 1700 × 1500 mm leaves a clean gap.
-# A slightly coarser pixel pitch (12 mm) keeps 9 hearts to ~28.8k pixels.
+# voxeled layout — a 3×3 matrix of Möbius hearts STANDING on the ground plane.
+#   run with:  make grid   (or: node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/grid-3x3.yaml)
+#
+# Each heart is upright (its local +Y is up). The 3×3 is a FLOOR FOOTPRINT: columns spread in X,
+# rows recede in Z (depth) — not stacked in Y — so all nine sit on the ground instead of forming
+# a wall. Grid pitch 1700 (X) × 1600 (Z, depth). Coarser pixel pitch (12 mm) keeps it ~28.8k px.
 name: grid-3x3
 units: mm
 
@@ -11,21 +13,24 @@ fixtures:
     params: { panelsPerSide: 8, pitchMM: 12, twist: mobius }
 
 instances:
-  - { fixture: heart, name: r0c0, pos: [-1700,  1500, 0] }
-  - { fixture: heart, name: r0c1, pos: [    0,  1500, 0] }
-  - { fixture: heart, name: r0c2, pos: [ 1700,  1500, 0] }
-  - { fixture: heart, name: r1c0, pos: [-1700,     0, 0] }
-  - { fixture: heart, name: r1c1, pos: [    0,     0, 0] }
-  - { fixture: heart, name: r1c2, pos: [ 1700,     0, 0] }
-  - { fixture: heart, name: r2c0, pos: [-1700, -1500, 0] }
-  - { fixture: heart, name: r2c1, pos: [    0, -1500, 0] }
-  - { fixture: heart, name: r2c2, pos: [ 1700, -1500, 0] }
+  # front row (nearest the camera, +Z)
+  - { fixture: heart, name: fL, pos: [-1700, 0,  1600] }
+  - { fixture: heart, name: fC, pos: [    0, 0,  1600] }
+  - { fixture: heart, name: fR, pos: [ 1700, 0,  1600] }
+  # middle row
+  - { fixture: heart, name: mL, pos: [-1700, 0,     0] }
+  - { fixture: heart, name: mC, pos: [    0, 0,     0] }
+  - { fixture: heart, name: mR, pos: [ 1700, 0,     0] }
+  # back row (-Z)
+  - { fixture: heart, name: bL, pos: [-1700, 0, -1600] }
+  - { fixture: heart, name: bC, pos: [    0, 0, -1600] }
+  - { fixture: heart, name: bR, pos: [ 1700, 0, -1600] }
 
 show:
   holdS: 3.5
   fadeS: 2.5
   scenes:
-    - { name: chase (per-heart),      pattern: ribbonChase }
-    - { name: wipe → across (world),  pattern: worldWipe, params: { axis: 0, space: world, speedMM: 1200, spacingMM: 2600 } }
-    - { name: wipe ↑ up (world),      pattern: worldWipe, params: { axis: 1, space: world, speedMM: 1000, spacingMM: 2200, hue: 0.75 } }
-    - { name: normals,                pattern: normalRGB }
+    - { name: chase (per-heart),        pattern: ribbonChase }
+    - { name: wipe → across (world X),  pattern: worldWipe, params: { axis: 0, space: world, speedMM: 1200, spacingMM: 2600 } }
+    - { name: wipe ⇉ depth (world Z),   pattern: worldWipe, params: { axis: 2, space: world, speedMM: 1100, spacingMM: 2400, hue: 0.75 } }
+    - { name: normals,                  pattern: normalRGB }
