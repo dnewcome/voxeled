@@ -45,6 +45,7 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
         fixture: inst.fixtureName,
         pos: inst.pos || [0, 0, 0],
         rotDeg: inst.rotDeg || [0, 0, 0],
+        ...(inst.output ? { output: inst.output } : {}),
       })),
     },
   });
@@ -73,12 +74,16 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {} } = {}) {
 
   const instances = (doc.instances || []).map((inst, k) => {
     if (!inst.fixture) throw new Error(`instance #${k} is missing a "fixture"`);
+    const def = fixDefs[inst.fixture] || {};
+    // The output patch merges the fixture-level default with per-instance overrides.
+    const output = def.output || inst.output ? { ...(def.output || {}), ...(inst.output || {}) } : undefined;
     return {
       name: inst.name || `${inst.fixture}-${k + 1}`,
       fixtureName: inst.fixture,
       fixture: getFixture(inst.fixture),
       pos: inst.pos,
       rotDeg: inst.rotDeg,
+      output,
     };
   });
   if (!instances.length) throw new Error("layout has no instances");

@@ -40,12 +40,51 @@ metadata that produced them. It is plain JSON (`*.vxl.json`).
 }
 ```
 
-**Addressing** is index-implied in v0 (pixel `i` → DDP byte offset `i*3` / Art-Net universe
-`i/170`). Explicit per-pixel patch (universe/channel, byte order) is a planned addition and will
-live on each pixel as an `addr` object; readers should tolerate its absence.
+**Addressing / patch.** The scene owns the *wiring*, not just the geometry: each fixture (or
+instance) can carry an `output` block — protocol + address — and a single installation may mix
+protocols. voxeled's dispatcher executes them. See [Patch — output mapping](#patch--output-mapping).
+Without an `output` block, addressing is index-implied (pixel `i` → DDP offset `i·3` / Art-Net
+universe `i/170`).
 
 **Layout files** (`*.yaml`) are the *authoring* form — fixtures + instances + a show — from which
 a `.vxl.json` is resolved. See [`DEMO-mobius-heart.md`](DEMO-mobius-heart.md) for the layout schema.
+
+## Patch — output mapping
+
+A fixture (or a single instance) carries an `output` block; voxeled's dispatcher
+(`src/output/dispatch.mjs`) groups pixels by instance and fans each to its protocol — **one
+installation can mix protocols**. Fixture-level `output` is the default; per-instance `output`
+overrides it field-by-field (so every physical fixture can have its own host/universe).
+
+```yaml
+fixtures:
+  heart:
+    type: mobius-heart
+    params: { ... }
+    output: { protocol: artnet, host: 10.0.0.5, universe: 0, byteOrder: grb }  # fixture default
+instances:
+  - { fixture: heart, name: left,  pos: [...] }                                # inherits
+  - { fixture: heart, name: right, pos: [...], output: { host: 10.0.0.6, universe: 4 } }  # override
+```
+
+| field | protocols | meaning |
+|---|---|---|
+| `protocol` | all | `artnet` \| `ddp` \| `danmx` \| a registered custom name |
+| `host`, `port` | all | target IP + UDP port (defaults: artnet/danmx 6454, ddp 4048) |
+| `byteOrder` | artnet, ddp | `rgb` \| `grb` \| `bgr` \| `rgbw` \| `grbw` … (white = min(r,g,b)) |
+| `universe`, `channel` | artnet | start universe (0-based) + channel (1-based); pixels roll across universes |
+| `offset` | ddp | start byte offset in the receiver framebuffer |
+| `startPixel` | danmx | start pixel index in the dan-mx frame |
+
+Built-in protocols: **Art-Net** (pixels merged into 512-ch universes per host/universe),
+**DDP** (offset framebuffer, MTU-chunked), and **dan-mx**
+([github.com/dnewcome/dan-mx](https://github.com/dnewcome/dan-mx)) — voxeled emits byte-compatible
+RAW/RGB888 `DMX2` frames, MTU-chunked. **Custom protocols** plug in via
+`createDispatcher(scene, { customProtocols: { name: (sock, plan, bytes, seq) => {…} } })` —
+written once in voxeled, so every consumer (including the TiXL bridge) gets it for free.
+
+Mixed-protocol demo (Art-Net + dan-mx + DDP from one show):
+`node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/patched.yaml`.
 
 ## glTF export (`.glb`) — the map travels
 

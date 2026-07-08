@@ -18,6 +18,7 @@ import { createShow } from "../../src/mixer.mjs";
 import { PATTERNS } from "../../src/patterns.mjs";
 import { createArtNetSender } from "../../src/senders/artnet.mjs";
 import { createDDPSender } from "../../src/senders/ddp.mjs";
+import { createDispatcher } from "../../src/output/dispatch.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
@@ -55,6 +56,9 @@ const sceneJSON = JSON.stringify(scene);
 const senders = [];
 if (process.env.ARTNET) senders.push(createArtNetSender({ host: process.env.ARTNET }));
 if (process.env.DDP) senders.push(createDDPSender({ host: process.env.DDP }));
+// If the scene carries a patch (per-fixture `output`), drive it — mixed protocols and all.
+const patched = (scene.meta.instances || []).some((i) => i.output?.protocol);
+if (patched) senders.push(createDispatcher(scene));
 
 // Control endpoint: the viewer's crossfader / auto toggle pokes this to drive `control`.
 function controlHandler(req, res, params) {
@@ -90,7 +94,10 @@ console.log(`♥ voxeled — Möbius LED Heart demo`);
 console.log(`  layout:  ${path.relative(process.cwd(), layoutPath)} — "${scene.name}"`);
 console.log(`  rig:     ${scene.meta.instances.length} instance(s) · ${scene.count.toLocaleString()} px`);
 console.log(single ? `  pattern: ${process.env.VOX_PATTERN} (single)` : `  show:    ${show.names.join("  →  ")}  (auto-crossfade)`);
-console.log(`  senders: ${senders.length ? senders.map((s) => `${s.kind}→${s.target}`).join(", ") : "none (set ARTNET=host and/or DDP=host)"}`);
+const outDesc = senders.length
+  ? senders.map((s) => (s.kind === "dispatch" ? `patch[${s.summary.join(", ")}]` : `${s.kind}→${s.target}`)).join("  ")
+  : "none (set ARTNET=host / DDP=host, or add per-fixture `output` in the layout)";
+console.log(`  output:  ${outDesc}`);
 console.log(`  viewer:  ${bus.url}`);
 
 process.on("SIGINT", () => {

@@ -1,0 +1,24 @@
+# voxeled layout — one installation, THREE control protocols, described in the scene itself.
+# The scene is the source of truth for the patch: each fixture instance carries an `output` block
+# (protocol + address). voxeled's dispatcher executes them all from one show.
+#   run with:  node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/patched.yaml
+name: patched
+units: mm
+
+fixtures:
+  heart:
+    type: mobius-heart
+    params: { panelsPerSide: 4, pitchMM: 20, twist: mobius }
+
+instances:
+  # Art-Net fixture, GRB-ordered, starting at universe 0
+  - { fixture: heart, name: left,  pos: [-900, 0, 0], output: { protocol: artnet, host: 127.0.0.1, universe: 0, channel: 1, byteOrder: grb } }
+  # dan-mx fixture (github.com/dnewcome/dan-mx) — RAW/RGB888 frames
+  - { fixture: heart, name: mid,   pos: [   0, 0, 0], output: { protocol: danmx,  host: 127.0.0.1, startPixel: 0 } }
+  # DDP fixture, RGB, offset 0
+  - { fixture: heart, name: right, pos: [ 900, 0, 0], output: { protocol: ddp,    host: 127.0.0.1, offset: 0 } }
+
+show:
+  scenes:
+    - { name: chase, pattern: ribbonChase }
+    - { name: wipe,  pattern: worldWipe, params: { axis: 0, space: world } }

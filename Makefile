@@ -5,7 +5,7 @@ NODE := node
 RUN  := examples/mobius-heart/run.mjs
 
 .DEFAULT_GOAL := help
-.PHONY: help demo grid facing imported test map export import stop restart clean
+.PHONY: help demo grid facing imported patched test map export import stop restart clean
 
 help: ## Show this help
 	@echo "voxeled — targets:"
@@ -24,6 +24,9 @@ facing: ## Run the 4 facing hearts (per-instance rotation)
 
 imported: ## Run the mixed rig — an imported glTF torus between two hearts
 	PORT=$(PORT) $(NODE) $(RUN) examples/mobius-heart/layouts/imported.yaml
+
+patched: ## Run the mixed-protocol rig — Art-Net + dan-mx + DDP from one scene
+	PORT=$(PORT) $(NODE) $(RUN) examples/mobius-heart/layouts/patched.yaml
 
 test: ## Run the full test suite (logic + headless-Chrome render gate)
 	$(NODE) test/run.mjs
