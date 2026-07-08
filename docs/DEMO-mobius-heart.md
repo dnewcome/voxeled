@@ -41,7 +41,8 @@ YAML, not env vars. What remains as env:
 | `DDP` | — | host to stream DDP to (e.g. `192.168.1.60`) |
 
 ```bash
-VOX_LAYOUT=examples/mobius-heart/layouts/facing-hearts.yaml node examples/mobius-heart/run.mjs
+VOX_LAYOUT=examples/mobius-heart/layouts/grid-3x3.yaml node examples/mobius-heart/run.mjs      # 3×3 matrix, 9 hearts
+VOX_LAYOUT=examples/mobius-heart/layouts/facing-hearts.yaml node examples/mobius-heart/run.mjs # 4 hearts, alternating 180°
 VOX_PATTERN=worldWipe node examples/mobius-heart/run.mjs           # one pattern, no crossfade
 ARTNET=192.168.1.50 node examples/mobius-heart/run.mjs             # + drive real Art-Net fixtures
 ```
@@ -177,7 +178,7 @@ examples/mobius-heart/
   heart.mjs   port of heart_path.py + the ribbon frame (F = T × D); samples a heart fixture
   map.mjs     place N instances → a voxeled scene/rig (the "map"); also a CLI
   run.mjs     the full demo: load YAML layout → crossfading show → bus + senders (the "drive")
-  layouts/    YAML layout files — two-hearts.yaml (default), facing-hearts.yaml
+  layouts/    YAML layout files — two-hearts.yaml (default), grid-3x3.yaml, facing-hearts.yaml
 src/
   format.mjs  .vxl scene v0 (build/save/load/bounds)
   yaml.mjs    dependency-free YAML-subset parser (layout files)

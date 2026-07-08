@@ -89,5 +89,34 @@ await new Promise((resolve) => {
   });
 });
 
+// Large frame (>65535 bytes) exercises the 64-bit WebSocket length path — used by big rigs
+// like the 3×3 grid (28,800 px → 86,400 bytes/frame).
+await new Promise((resolve) => {
+  const PORT = 18100;
+  const bus = createBus({ port: PORT });
+  const BIG = 90000;
+  const payload = new Uint8Array(BIG);
+  for (let i = 0; i < BIG; i++) payload[i] = i & 0xff;
+  const key = crypto.randomBytes(16).toString("base64");
+  const sock = net.connect(PORT, "127.0.0.1", () => {
+    sock.write(`GET /bus HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ${key}\r\nSec-WebSocket-Version: 13\r\n\r\n`);
+  });
+  let buf = Buffer.alloc(0), hs = false;
+  sock.on("data", (d) => {
+    buf = Buffer.concat([buf, d]);
+    if (!hs) { const i = buf.indexOf("\r\n\r\n"); if (i < 0) return; buf = buf.slice(i + 4); hs = true; bus.broadcast(payload); return; }
+    if (buf.length < 2) return;
+    let len = buf[1] & 0x7f, off = 2;
+    if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); off = 4; }
+    else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); off = 10; }
+    if (buf.length >= off + len) {
+      ok((buf[1] & 0x7f) === 127, "large frame uses 64-bit length marker (127)");
+      ok(len === BIG, `decoded length = ${BIG} bytes`);
+      ok(buf[off] === 0 && buf[off + 255] === 255, "payload bytes intact");
+      bus.close(); sock.destroy(); resolve();
+    }
+  });
+});
+
 console.log(`senders-bus: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

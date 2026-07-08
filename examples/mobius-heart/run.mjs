@@ -73,6 +73,14 @@ const bus = createBus({
   ],
 });
 
+bus.server.on("error", (e) => {
+  if (e.code === "EADDRINUSE") {
+    console.error(`\n✗ port ${PORT} is already in use — another demo is likely running. Stop it, or run with PORT=<n>.`);
+    process.exit(1);
+  }
+  throw e;
+});
+
 const hub = createHub({ scene, shade, fps: 30, bus, senders });
 hub.start();
 
