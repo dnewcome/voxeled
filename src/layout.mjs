@@ -30,12 +30,16 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
     }
   });
 
+  // Real pixel pitch (mm) so the viewer can size LEDs by spacing, not by rig extent.
+  const pitches = instances.map((inst) => inst.fixture.meta?.pitchMM).filter((p) => p > 0);
+
   return buildScene({
     name,
     units,
     pixels,
     meta: {
       ...meta,
+      pitchMM: pitches.length ? Math.min(...pitches) : undefined,
       instances: instances.map((inst) => ({
         name: inst.name,
         fixture: inst.fixtureName,

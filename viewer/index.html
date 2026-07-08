@@ -101,8 +101,11 @@ async function boot() {
   const size = [hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]];
   const center = new THREE.Vector3((lo[0]+hi[0])/2, (lo[1]+hi[1])/2, (lo[2]+hi[2])/2);
   const diag = Math.hypot(...size);
-  const pitch = scene.meta?.pitchMM || diag / 100;
-  const ledSize = Math.max(pitch * 0.6, diag / 500);
+  // Size each LED box off the real pixel PITCH (mm spacing), not the rig extent — otherwise
+  // adding/spacing instances inflates the boxes and they overlap. ~0.5·pitch reads as distinct
+  // dots with a gap. Fall back to a small fraction of the scene only if pitch is unknown.
+  const pitch = scene.meta?.pitchMM;
+  const ledSize = pitch ? pitch * 0.5 : diag / 400;
 
   const geo = new THREE.BoxGeometry(ledSize, ledSize, ledSize);
   const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
