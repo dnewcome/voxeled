@@ -11,8 +11,13 @@ namespace dan.MyProject;
 // This is the voxeled↔TiXL import bridge. It intentionally does NOT do output — voxeled's map is
 // the source of truth; TiXL drives it (or a running voxeled applies the scene's patch).
 [Guid("b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b30")]
-public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>
+public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveFilename
 {
+    // Gives FilePath a file-picker in the editor (and returns a path TiXL/Wine resolves correctly).
+    public InputSlot<string> SourcePathSlot => FilePath;
+    public IEnumerable<string> FileFilter => _fileFilter;
+    private static readonly string[] _fileFilter = ["*.vxl.json", "*.json", "*"];
+
     [Output(Guid = "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b31")]
     public readonly Slot<BufferWithViews> Points = new();
 
@@ -25,14 +30,23 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>
 
     private void Update(EvaluationContext context)
     {
-        var path = FilePath.GetValue(context);
+        var rawPath = FilePath.GetValue(context);
         var scale = ScaleToUnits.GetValue(context);
         var size = PointSize.GetValue(context);
 
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        if (string.IsNullOrWhiteSpace(rawPath))
         {
-            if (!string.IsNullOrWhiteSpace(path))
-                Log.Warning($"voxeled: scene file not found: {path}", this);
+            Points.Value = null!;
+            return;
+        }
+
+        // Under Wine, a Unix-style path (/home/…) must be addressed via the Z: drive; on native
+        // Windows the path is used as-is.
+        var path = rawPath.StartsWith("/") ? "Z:" + rawPath.Replace('/', '\\') : rawPath;
+
+        if (!File.Exists(path))
+        {
+            Log.Warning($"voxeled: scene file not found: {path} (from '{rawPath}')", this);
             Points.Value = null!;
             return;
         }
@@ -52,7 +66,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>
             ResourceManager.CreateStructuredBufferSrv(bw.Buffer, ref bw.Srv);
             ResourceManager.CreateStructuredBufferUav(bw.Buffer, UnorderedAccessViewBufferFlags.None, ref bw.Uav);
             Points.Value = bw;
-            Log.Debug($"voxeled: loaded {points.Length} points from {Path.GetFileName(path)}", this);
+            Log.Info($"voxeled: loaded {points.Length} points from {path}", this);
         }
         catch (Exception e)
         {
