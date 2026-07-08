@@ -1,5 +1,7 @@
 using System.Text.Json; // the only using not already global in the package's .csproj
 
+#pragma warning disable CA1416 // T3 types carry [SupportedOSPlatform("windows")]; TiXL runs on Windows/Wine.
+
 namespace dan.MyProject;
 
 // Load a voxeled scene (.vxl.json) as a TiXL Points buffer: each LED becomes a Point with its
@@ -31,7 +33,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>
         {
             if (!string.IsNullOrWhiteSpace(path))
                 Log.Warning($"voxeled: scene file not found: {path}", this);
-            Points.Value = null;
+            Points.Value = null!;
             return;
         }
 
@@ -41,7 +43,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>
             if (points.Length == 0)
             {
                 Log.Warning($"voxeled: no pixels in {path}", this);
-                Points.Value = null;
+                Points.Value = null!;
                 return;
             }
 
@@ -55,7 +57,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>
         catch (Exception e)
         {
             Log.Warning($"voxeled: failed to load {path}: {e.Message}", this);
-            Points.Value = null;
+            Points.Value = null!;
         }
     }
 

@@ -31,12 +31,23 @@ the package's `.csproj`; all T3/SharpDX types it uses are already global-aliased
 3. Wire **Points** → TiXL's **PointsToDmxLights** → **ArtnetOutput** to drive Art-Net fixtures,
    or run any point/color operators to light them with your look.
 
+## Rebuild / reload
+
+TiXL loads a package's **prebuilt DLL and does *not* recompile on startup**, so a freshly-copied
+`.cs` won't appear until the DLL is rebuilt. Rebuild it (this also compile-checks the operator),
+then **restart TiXL**:
+
+```bash
+WINEPREFIX=~/.wine-tixl T3_ASSEMBLY_PATH='C:\Program Files\TiXL\TiXL 4.1.0.9-alpha' \
+  wine 'C:\Program Files\dotnet\dotnet.exe' build 'Z:\home\dan\Documents\TiXL\MyProject\MyProject.csproj' -c Debug
+```
+
+(Alternatively, edit + save the `.cs` from *inside* TiXL to trigger its own hot-recompile.)
+
 ## Notes / status
 
+- **Compiles clean** — 0 warnings, 0 errors against the TiXL 4.1 `MyProject` package (verified via
+  the `wine dotnet build` above; the DLL contains `LoadVoxeledScene`).
 - **GUIDs are stable** — don't change them; the `.t3`/`.t3ui` are keyed to them.
-- This was hand-authored and **not compiled here** (no dotnet/TiXL on the authoring machine). If
-  TiXL's Log window shows a compile error on reload, paste it back and it's a quick fix. Most
-  likely spots: the `Point` struct field set (Position/Orientation/Color/Scale/F1/F2) and the
-  `ResourceManager.SetupStructuredBuffer` overload.
 - No file-picker yet (plain path field) — paste the absolute path. Adding `IDescriptiveFilename`
   for the picker is a small follow-up.
