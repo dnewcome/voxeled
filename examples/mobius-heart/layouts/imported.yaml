@@ -1,0 +1,26 @@
+# voxeled layout — a MIXED rig: a glTF fixture imported from a file (assets/torus.glb, standing
+# in for a Blender export) placed alongside native Möbius-heart fixtures. One rig, two sources.
+#   run with:  node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/imported.yaml
+name: imported
+units: mm
+
+fixtures:
+  heart:
+    type: mobius-heart
+    params: { panelsPerSide: 6, pitchMM: 14, twist: mobius }
+  ring:
+    type: gltf                              # import LED points + normals from a glTF/GLB file
+    params: { file: examples/mobius-heart/assets/torus.glb }
+
+instances:
+  - { fixture: heart, name: heart-L, pos: [-1100, 0, 0] }
+  - { fixture: ring,  name: ring-C,  pos: [    0, 0, 0] }
+  - { fixture: heart, name: heart-R, pos: [ 1100, 0, 0] }
+
+show:
+  holdS: 3.5
+  fadeS: 2.5
+  scenes:
+    - { name: wipe across (world), pattern: worldWipe, params: { axis: 0, space: world, speedMM: 900, spacingMM: 1800 } }
+    - { name: chase,               pattern: ribbonChase }
+    - { name: normals,             pattern: normalRGB }

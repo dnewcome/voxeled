@@ -5,7 +5,7 @@ NODE := node
 RUN  := examples/mobius-heart/run.mjs
 
 .DEFAULT_GOAL := help
-.PHONY: help demo grid facing test map export stop restart clean
+.PHONY: help demo grid facing imported test map export import stop restart clean
 
 help: ## Show this help
 	@echo "voxeled — targets:"
@@ -22,6 +22,9 @@ grid: ## Run the 3x3 heart matrix
 facing: ## Run the 4 facing hearts (per-instance rotation)
 	PORT=$(PORT) $(NODE) $(RUN) examples/mobius-heart/layouts/facing-hearts.yaml
 
+imported: ## Run the mixed rig — an imported glTF torus between two hearts
+	PORT=$(PORT) $(NODE) $(RUN) examples/mobius-heart/layouts/imported.yaml
+
 test: ## Run the full test suite (logic + headless-Chrome render gate)
 	$(NODE) test/run.mjs
 
@@ -30,6 +33,9 @@ map: ## Generate a scene file from the mapper — e.g. make map ARGS="--hearts 3
 
 export: ## Export a layout to glTF + .vxl.json → build/ (LAYOUT=path, default two-hearts)
 	$(NODE) examples/mobius-heart/export.mjs $(LAYOUT)
+
+import: ## Inspect a glTF/GLB as a fixture — make import GLB=path/to.glb
+	$(NODE) examples/mobius-heart/import.mjs $(GLB)
 
 stop: ## Free the demo port (kills whatever holds PORT)
 	@fuser -k $(PORT)/tcp 2>/dev/null || lsof -ti tcp:$(PORT) | xargs -r kill 2>/dev/null || true

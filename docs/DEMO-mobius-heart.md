@@ -191,11 +191,14 @@ examples/mobius-heart/
   map.mjs     place N instances → a voxeled scene/rig (the "map"); also a CLI
   run.mjs     the full demo: load YAML layout → crossfading show → bus + senders (the "drive")
   export.mjs  export a layout to glTF (.glb) + .vxl.json for interchange
-  fixtures.mjs  fixture-type registry (mobius-heart), shared by run + export
-  layouts/    YAML layout files — two-hearts.yaml (default), grid-3x3.yaml, facing-hearts.yaml
+  import.mjs  inspect a glTF/GLB as a fixture (points + normals)
+  fixtures.mjs  fixture-type registry (mobius-heart + gltf import), shared by run/export
+  layouts/    YAML layouts — two-hearts (default), grid-3x3, facing-hearts, imported (mixed rig)
+  assets/torus.glb  sample glTF import asset (stands in for a Blender export)
 src/
   format.mjs  .vxl scene v0 (build/save/load/bounds)
-  io/gltf.mjs  glTF (.glb) exporter — the map travels to Blender / TouchDesigner / three.js
+  io/gltf.mjs         glTF (.glb) exporter — the map travels to Blender / TouchDesigner / three.js
+  io/gltf-import.mjs  glTF (.glb) importer — external geometry → a fixture (points + normals)
   yaml.mjs    dependency-free YAML-subset parser (layout files)
   layout.mjs  buildSceneFromLayout + resolveLayout (parsed YAML doc → scene + show)
   patterns.mjs  spatial patterns: ribbonChase, worldWipe (world/fixture), planeSweep, normalRGB

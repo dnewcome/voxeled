@@ -66,10 +66,28 @@ baked look. The `extras.voxeled` block lets a voxeled-aware tool recover the exa
 Verified: the exporter is round-trip-checked in `test/gltf.test.mjs` (spec-compliant GLB), and the
 output loads + renders in three.js `GLTFLoader` (independent of voxeled's own viewer).
 
+## glTF import (`.glb` → fixture)
+
+The reverse bridge: author geometry anywhere (Blender), bring it in as a fixture. Inspect a file
+with `node examples/mobius-heart/import.mjs file.glb` (or `make import GLB=…`); a layout uses it via
+the `gltf` fixture type:
+
+```yaml
+fixtures:
+  ring: { type: gltf, params: { file: examples/mobius-heart/assets/torus.glb } }
+```
+
+Every point of every mesh primitive becomes an LED. `NORMAL` is used if present (else estimated
+outward from the centroid); positions are scaled glTF-metres → mm and node transforms are baked in.
+Imported fixtures mix freely with native ones in one rig — see
+[`layouts/imported.yaml`](../examples/mobius-heart/layouts/imported.yaml) (a glTF torus between two
+Möbius hearts, all driven by one show).
+
+Verified: export → import round-trips positions to **< 1 mm** with normals preserved
+(`test/gltf-import.test.mjs`), and it reads a foreign POSITION-only GLB, filling the normals.
+
 ## Roadmap for interchange
 
-- **glTF import** — a Blender/glTF point cloud (with `NORMAL`) → a voxeled fixture. Closes the
-  loop: author geometry anywhere, bring it in. (Normals from the mesh; estimate if absent.)
 - **MVR/GDTF import** — pull a pro-lighting rig (fixtures + mm positions) from Vectorworks/Depence.
 - **Explicit patch** — per-pixel universe/channel/offset so the map carries its wiring.
 - **Stable versioning** — `voxeled` bumps on breaking changes; importers check it.

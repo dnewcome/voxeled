@@ -12,6 +12,7 @@
     "demo:facing": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/facing-hearts.yaml",
     "map": "node examples/mobius-heart/map.mjs",
     "export": "node examples/mobius-heart/export.mjs",
+    "import": "node examples/mobius-heart/import.mjs",
     "test": "node test/run.mjs"
   }
 }
