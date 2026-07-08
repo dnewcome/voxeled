@@ -31,6 +31,19 @@ the package's `.csproj`; all T3/SharpDX types it uses are already global-aliased
 3. Wire **Points** → TiXL's **PointsToDmxLights** → **ArtnetOutput** to drive Art-Net fixtures,
    or run any point/color operators to light them with your look.
 
+## Launch (Wine)
+
+TiXL and its .NET runtime live in the **`~/.wine-tixl`** prefix. A bare `wine TiXL.exe` uses the
+default `~/.wine` prefix (no .NET) and fails with *"You must install .NET"*. Launch with the prefix
+and .NET location set — or use the bundled script, which also rebuilds the operator first:
+
+```bash
+./run-tixl.sh                     # rebuild MyProject, then launch TiXL
+# …or manually:
+cd ~/.wine-tixl/drive_c/Program\ Files/TiXL/TiXL\ 4.1.0.9-alpha
+WINEPREFIX=~/.wine-tixl DOTNET_ROOT='C:\Program Files\dotnet' wine TiXL.exe
+```
+
 ## Rebuild / reload
 
 TiXL loads a package's **prebuilt DLL and does *not* recompile on startup**, so a freshly-copied
