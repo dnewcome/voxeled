@@ -16,6 +16,11 @@ DOTNET_WIN='C:\Program Files\dotnet\dotnet.exe'
 PROJECT_DIR="$HOME/Documents/TiXL/MyProject"
 CSPROJ_WIN="Z:$(printf '%s' "$PROJECT_DIR/MyProject.csproj" | sed 's:/:\\:g')"
 
+# Scene fed to LoadVoxeledScene when its FilePath input is empty (VOXELED_SCENE fallback).
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCENE_LINUX="$REPO_DIR/build/two-hearts.vxl.json"
+SCENE_WIN="${VOXELED_SCENE:-Z:$(printf '%s' "$SCENE_LINUX" | sed 's:/:\\:g')}"
+
 if [ "${1:-}" != "--no-build" ]; then
   echo "→ building operator package: $PROJECT_DIR"
   WINEPREFIX="$PREFIX" WINEDEBUG=-all T3_ASSEMBLY_PATH="$INSTALL_WIN" \
@@ -23,6 +28,8 @@ if [ "${1:-}" != "--no-build" ]; then
     | grep -E "error|Build succeeded|Build FAILED|Warning\(s\)|Error\(s\)" || true
 fi
 
+[ -f "$SCENE_LINUX" ] || echo "  ⚠ scene not found: $SCENE_LINUX — run 'make export' in $REPO_DIR"
 echo "→ launching TiXL (prefix: $PREFIX)"
+echo "  VOXELED_SCENE=$SCENE_WIN"
 cd "$INSTALL_DIR" || { echo "TiXL install not found at $INSTALL_DIR"; exit 1; }
-exec env WINEPREFIX="$PREFIX" DOTNET_ROOT='C:\Program Files\dotnet' WINEDEBUG=-all wine TiXL.exe
+exec env WINEPREFIX="$PREFIX" DOTNET_ROOT='C:\Program Files\dotnet' VOXELED_SCENE="$SCENE_WIN" WINEDEBUG=-all wine TiXL.exe

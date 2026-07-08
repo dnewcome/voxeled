@@ -31,6 +31,9 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
     private void Update(EvaluationContext context)
     {
         var rawPath = FilePath.GetValue(context);
+        // Fallback: if the FilePath input is empty, take it from the VOXELED_SCENE env var.
+        if (string.IsNullOrWhiteSpace(rawPath))
+            rawPath = Environment.GetEnvironmentVariable("VOXELED_SCENE");
         var scale = ScaleToUnits.GetValue(context);
         var size = PointSize.GetValue(context);
 
