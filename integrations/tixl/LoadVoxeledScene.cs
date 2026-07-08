@@ -27,6 +27,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
     }
 
     private BufferWithViews? _buffer;
+    private string? _loadedKey; // rebuild the buffer only when path/scale/size change (not every frame)
 
     private void Update(EvaluationContext context)
     {
@@ -47,9 +48,20 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
         // Windows the path is used as-is.
         var path = rawPath.StartsWith("/") ? "Z:" + rawPath.Replace('/', '\\') : rawPath;
 
+        // Already loaded this exact config? Re-emit the cached buffer — do NOT rebuild every frame
+        // (rebuilding disposes the buffer DrawPoints is mid-render on → red op + nothing drawn).
+        var key = $"{path}|{scale}|{size}";
+        if (key == _loadedKey)
+        {
+            Points.Value = _buffer!;
+            return;
+        }
+        _loadedKey = key;
+
         if (!File.Exists(path))
         {
             Log.Warning($"voxeled: scene file not found: {path} (from '{rawPath}')", this);
+            _buffer = null;
             Points.Value = null!;
             return;
         }
@@ -74,6 +86,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
         catch (Exception e)
         {
             Log.Warning($"voxeled: failed to load {path}: {e.Message}", this);
+            _buffer = null;
             Points.Value = null!;
         }
     }
