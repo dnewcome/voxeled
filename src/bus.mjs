@@ -58,7 +58,7 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir
       } catch (e) {
         res.writeHead(500); res.end(String(e)); return;
       }
-      res.writeHead(200, { "Content-Type": route.contentType || "application/octet-stream" });
+      res.writeHead(200, { "Content-Type": route.contentType || "application/octet-stream", "Cache-Control": "no-store" });
       res.end(body);
       return;
     }
@@ -71,7 +71,7 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir
       if (resolved === staticRoot || resolved.startsWith(staticRoot + path.sep)) {
         try {
           if (existsSync(resolved) && statSync(resolved).isFile()) {
-            res.writeHead(200, { "Content-Type": MIME[path.extname(resolved)] || "application/octet-stream" });
+            res.writeHead(200, { "Content-Type": MIME[path.extname(resolved)] || "application/octet-stream", "Cache-Control": "no-store" });
             res.end(readFileSync(resolved));
             return;
           }

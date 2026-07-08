@@ -26,7 +26,12 @@ const PORT = +(process.env.PORT || 8080);
 const FIXTURES = { "mobius-heart": (params) => sampleHeart(params) };
 
 // Load + resolve the layout file into a scene (the rig) and a show (the scenes).
-const layoutPath = process.env.VOX_LAYOUT || path.join(HERE, "layouts/two-hearts.yaml");
+// Layout: first CLI arg (e.g. `node run.mjs path/to.yaml`), else VOX_LAYOUT, else two-hearts.
+const layoutPath = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : process.env.VOX_LAYOUT
+    ? path.resolve(process.env.VOX_LAYOUT)
+    : path.join(HERE, "layouts/two-hearts.yaml");
 let scene, showCfg;
 try {
   const doc = parseYAML(readFileSync(layoutPath, "utf8"));

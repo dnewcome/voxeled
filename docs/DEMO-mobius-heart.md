@@ -47,6 +47,14 @@ VOX_PATTERN=worldWipe node examples/mobius-heart/run.mjs           # one pattern
 ARTNET=192.168.1.50 node examples/mobius-heart/run.mjs             # + drive real Art-Net fixtures
 ```
 
+Shortcuts (Makefile, same as the `npm run demo:*` scripts):
+
+```bash
+make grid        # 3×3 matrix        make demo     # default two-hearts
+make facing      # 4 rotated hearts  make test     # full suite + render gate
+make stop        # free port 8080    make restart  # stop + demo
+```
+
 Just the map (programmatic, writes a scene file):
 
 ```bash

@@ -8,6 +8,8 @@
   "engines": { "node": ">=18" },
   "scripts": {
     "demo": "node examples/mobius-heart/run.mjs",
+    "demo:grid": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/grid-3x3.yaml",
+    "demo:facing": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/facing-hearts.yaml",
     "map": "node examples/mobius-heart/map.mjs",
     "test": "node test/run.mjs"
   }
