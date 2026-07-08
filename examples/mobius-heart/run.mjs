@@ -1,15 +1,17 @@
-// run.mjs — the full demo. Map N hearts into a rig, run a crossfading SHOW on the hub, and fan
-// identical frames to the browser viewer (WebSocket) and optionally to real fixtures over
-// Art-Net / DDP. Demonstrates: multi-instance layout, world-vs-fixture pattern space (the
-// "account for distance" toggle), and scene crossfades.
+// run.mjs — the full demo. Load a YAML layout (a rig of fixture instances + a show), run it on
+// the hub, and fan identical frames to the browser viewer (WebSocket) and optionally to real
+// fixtures over Art-Net / DDP. The rig, fixture params, and scenes all live in the layout file.
 //
-//   node examples/mobius-heart/run.mjs
-//   VOX_HEARTS=2 VOX_SPACING_FT=10 node examples/mobius-heart/run.mjs
-//   VOX_PATTERN=worldWipe node examples/mobius-heart/run.mjs   # single pattern, no crossfade
+//   node examples/mobius-heart/run.mjs                                    # default two-hearts.yaml
+//   VOX_LAYOUT=examples/mobius-heart/layouts/facing-hearts.yaml npm run demo
+//   VOX_PATTERN=worldWipe node examples/mobius-heart/run.mjs              # one pattern, no crossfade
 //   ARTNET=192.168.1.50 DDP=192.168.1.60 node examples/mobius-heart/run.mjs
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { generateScene } from "./map.mjs";
+import { parseYAML } from "../../src/yaml.mjs";
+import { resolveLayout } from "../../src/layout.mjs";
+import { sampleHeart } from "./heart.mjs";
 import { createBus } from "../../src/bus.mjs";
 import { createHub } from "../../src/hub.mjs";
 import { createShow } from "../../src/mixer.mjs";
@@ -20,34 +22,32 @@ import { createDDPSender } from "../../src/senders/ddp.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
 
-const scene = generateScene({
-  hearts: +(process.env.VOX_HEARTS || 2),
-  spacingFt: +(process.env.VOX_SPACING_FT || 10),
-  panelsPerSide: +(process.env.VOX_PANELS || 8),
-  pitchMM: +(process.env.VOX_PITCH || 10),
-  twist: process.env.VOX_TWIST || "mobius",
-});
+// Fixture-type registry: how a layout's `type:` becomes geometry. Add new fixtures here.
+const FIXTURES = { "mobius-heart": (params) => sampleHeart(params) };
 
-// The show: three scenes the mixer crossfades between. Scenes 1 & 2 are the same wipe in the two
-// coordinate spaces, so dissolving between them literally shows the 10-ft gap being accounted for.
-const scenes = [
-  { name: "chase (per-heart)", render: PATTERNS.ribbonChase() },
-  { name: "wipe · across (world)", render: PATTERNS.worldWipe({ axis: 0, space: "world" }) },
-  { name: "wipe · synced (fixture)", render: PATTERNS.worldWipe({ axis: 0, space: "fixture" }) },
-];
+// Load + resolve the layout file into a scene (the rig) and a show (the scenes).
+const layoutPath = process.env.VOX_LAYOUT || path.join(HERE, "layouts/two-hearts.yaml");
+let scene, showCfg;
+try {
+  const doc = parseYAML(readFileSync(layoutPath, "utf8"));
+  ({ scene, show: showCfg } = resolveLayout(doc, { fixtures: FIXTURES, patterns: PATTERNS }));
+} catch (e) {
+  console.error(`layout error in ${path.relative(process.cwd(), layoutPath)}:\n  ${e.message}`);
+  process.exit(1);
+}
+
+// Build the shade function: the show's crossfade, or a single pattern override for debugging.
 const control = { mode: "auto", fader: 0, a: 0, b: 1 };
-const show = createShow({ scenes, holdS: 4, fadeS: 2.5, control });
-
-// A single-pattern override for debugging (no crossfade).
 const single = process.env.VOX_PATTERN && PATTERNS[process.env.VOX_PATTERN];
 if (process.env.VOX_PATTERN && !single) {
   console.error(`unknown pattern "${process.env.VOX_PATTERN}". options: ${Object.keys(PATTERNS).join(", ")}`);
   process.exit(1);
 }
+const scenes = showCfg?.scenes?.length ? showCfg.scenes : [{ name: "chase", render: PATTERNS.ribbonChase() }];
+const show = createShow({ scenes, holdS: showCfg?.holdS ?? 4, fadeS: showCfg?.fadeS ?? 2.5, control });
 const shade = single ? single() : show.shade;
 
-// Attach show metadata for the viewer (scene names, timing).
-scene.meta.show = { scenes: show.names, holdS: 4, fadeS: 2.5, single: !!single };
+scene.meta.show = { scenes: show.names, single: !!single };
 const sceneJSON = JSON.stringify(scene);
 
 const senders = [];
@@ -77,7 +77,8 @@ const hub = createHub({ scene, shade, fps: 30, bus, senders });
 hub.start();
 
 console.log(`♥ voxeled — Möbius LED Heart demo`);
-console.log(`  rig:     ${scene.meta.instances.length} heart(s), ${scene.meta.spacingFt} ft apart · ${scene.count.toLocaleString()} px`);
+console.log(`  layout:  ${path.relative(process.cwd(), layoutPath)} — "${scene.name}"`);
+console.log(`  rig:     ${scene.meta.instances.length} instance(s) · ${scene.count.toLocaleString()} px`);
 console.log(single ? `  pattern: ${process.env.VOX_PATTERN} (single)` : `  show:    ${show.names.join("  →  ")}  (auto-crossfade)`);
 console.log(`  senders: ${senders.length ? senders.map((s) => `${s.kind}→${s.target}`).join(", ") : "none (set ARTNET=host and/or DDP=host)"}`);
 console.log(`  viewer:  ${bus.url}`);

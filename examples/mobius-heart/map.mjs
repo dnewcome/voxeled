@@ -21,11 +21,11 @@ export function generateScene({ hearts = 1, spacingFt = 10, ...heartOpts } = {})
   const instances = [];
   for (let k = 0; k < hearts; k++) {
     const x = (k - (hearts - 1) / 2) * spacingMM;
-    instances.push({ name: `heart-${k + 1}`, pos: [+x.toFixed(1), 0, 0], rotDeg: [0, 0, 0] });
+    instances.push({ name: `heart-${k + 1}`, fixtureName: "heart", fixture, pos: [+x.toFixed(1), 0, 0], rotDeg: [0, 0, 0] });
   }
   return buildSceneFromLayout({
     name: "mobius-led-heart",
-    fixture,
+    units: "mm",
     instances,
     meta: { spacingFt, spacingMM, perFixture: fixture.pixels.length },
   });

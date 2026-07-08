@@ -22,34 +22,31 @@ node examples/mobius-heart/run.mjs      # or: npm run demo   (Node ≥18, no dep
 # open http://localhost:8080
 ```
 
-By default it builds a **rig of two hearts, 10 ft apart**, and runs an **auto-crossfading show**
-through three scenes. In the viewer:
+By default it loads [`layouts/two-hearts.yaml`](../examples/mobius-heart/layouts/two-hearts.yaml)
+— a **rig of two hearts, 10 ft apart** — and runs its **auto-crossfading show**. In the viewer:
 
 - **drag** orbit · **scroll** zoom
 - **N** — toggle the normal quills
 - the **crossfader** (bottom-left) — dissolve between the first two scenes by hand; **[** / **]**
   nudge it, **A** returns to auto
 
-Knobs (env vars):
+The rig, fixture params, and scene list all live in the **layout file** (see below) — edit the
+YAML, not env vars. What remains as env:
 
 | var | default | effect |
 |---|---|---|
-| `VOX_HEARTS` | `2` | number of heart instances in the rig |
-| `VOX_SPACING_FT` | `10` | feet between instances (real world distance) |
+| `VOX_LAYOUT` | `…/layouts/two-hearts.yaml` | which YAML layout to load |
 | `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` |
-| `VOX_TWIST` | `mobius` | `mobius` \| `cookie-cutter` \| `flat-full` |
-| `VOX_PANELS` | `8` | panels per side (sets the size) |
-| `VOX_PITCH` | `10` | demo pixel pitch in mm (smaller = more pixels) |
 | `ARTNET` | — | host to stream Art-Net to (e.g. `192.168.1.50`) |
 | `DDP` | — | host to stream DDP to (e.g. `192.168.1.60`) |
 
 ```bash
-VOX_HEARTS=3 VOX_SPACING_FT=6 node examples/mobius-heart/run.mjs   # three hearts, 6 ft apart
+VOX_LAYOUT=examples/mobius-heart/layouts/facing-hearts.yaml node examples/mobius-heart/run.mjs
 VOX_PATTERN=worldWipe node examples/mobius-heart/run.mjs           # one pattern, no crossfade
 ARTNET=192.168.1.50 node examples/mobius-heart/run.mjs             # + drive real Art-Net fixtures
 ```
 
-Just the map, no server:
+Just the map (programmatic, writes a scene file):
 
 ```bash
 node examples/mobius-heart/map.mjs --hearts 2 --spacing 10 --pitch 10 --twist mobius
@@ -103,6 +100,42 @@ hearts 3048 mm apart in one shared world space. Each pixel then carries its **wo
 world pixel back into its instance's frame via the inverse transform — so *any* world-space pattern
 can be made per-instance by sampling `ctx.local(px)` instead of `px.p`.
 
+## Layout files (YAML)
+
+The rig is a declarative YAML file — fixtures, their instances, and the show. The default:
+
+```yaml
+name: two-hearts
+units: mm
+
+fixtures:
+  heart:
+    type: mobius-heart          # a registered fixture type (run.mjs → FIXTURES)
+    params: { panelsPerSide: 8, pitchMM: 10, twist: mobius }
+
+instances:                      # copies in shared world space (mm, degrees)
+  - { fixture: heart, name: left,  pos: [-1524, 0, 0] }
+  - { fixture: heart, name: right, pos: [ 1524, 0, 0] }
+
+show:
+  holdS: 4
+  fadeS: 2.5
+  scenes:
+    - { name: chase,  pattern: ribbonChase }
+    - { name: across, pattern: worldWipe, params: { space: world } }
+    - { name: synced, pattern: worldWipe, params: { space: fixture } }
+```
+
+- **fixtures** — reusable geometry built by a registered `type` + `params`. Add a new fixture
+  type by registering a `(params) => { pixels, meta }` function in `run.mjs`'s `FIXTURES` map.
+- **instances** — placements: `pos` (mm) and optional `rotDeg` (Euler degrees).
+  [`facing-hearts.yaml`](../examples/mobius-heart/layouts/facing-hearts.yaml) shows rotation.
+- **show** — the scene list the mixer crossfades; each scene is a `pattern` + `params`.
+
+Point `VOX_LAYOUT` at any file. Parsing is a small dependency-free YAML *subset* (`src/yaml.mjs`)
+— block maps/sequences, inline `[…]`/`{…}` flow, comments, typed scalars — enough for layout
+files; swap in `js-yaml` if you outgrow it.
+
 ## Crossfading scenes
 
 A **scene** is a look — a name + a pattern with its params bound. The **show** (`src/mixer.mjs`)
@@ -127,13 +160,15 @@ The heart's panels are HUB75 (or a transparent SPI film). voxeled stays protocol
 
 ## Verified
 
-Headless checks (`✅ 36/36` across three suites): mapper emits unit normals with real 3D depth
+Headless checks (`✅ 57/57` across four suites): mapper emits unit normals with real 3D depth
 from the twist; Art-Net framing (header, opcode `0x5000`, universe paging) and DDP framing
 (version/PUSH flags, offset, length); the WebSocket bus (RFC-6455 handshake + full-frame binary
 delivery); multi-instance placement + `ctx.local()` re-basing; `worldWipe` treating world vs
-fixture space differently; the mixer crossfade (endpoints, midpoint, auto timeline); and the
-`/control` endpoint mutating the fader. The browser render is the one piece a headless run can't
-exercise — its data contract (fetch `scene.json` + binary WS frames + `GET /control`) is what those checks cover.
+fixture space differently; the mixer crossfade (endpoints, midpoint, auto timeline); the
+`/control` endpoint mutating the fader; the YAML-subset parser (scalars, flow, quoting, comments,
+nested + seq-of-map, plus both real layout files); and `resolveLayout` (fixtures/instances/show +
+error handling). The browser render is the one piece a headless run can't exercise — its data
+contract (fetch `scene.json` + binary WS frames + `GET /control`) is what those checks cover.
 
 ## Files
 
@@ -141,10 +176,12 @@ exercise — its data contract (fetch `scene.json` + binary WS frames + `GET /co
 examples/mobius-heart/
   heart.mjs   port of heart_path.py + the ribbon frame (F = T × D); samples a heart fixture
   map.mjs     place N instances → a voxeled scene/rig (the "map"); also a CLI
-  run.mjs     the full demo: rig → crossfading show → bus + senders (the "drive")
+  run.mjs     the full demo: load YAML layout → crossfading show → bus + senders (the "drive")
+  layouts/    YAML layout files — two-hearts.yaml (default), facing-hearts.yaml
 src/
   format.mjs  .vxl scene v0 (build/save/load/bounds)
-  layout.mjs  place fixture instances by world transform into a shared-space rig
+  yaml.mjs    dependency-free YAML-subset parser (layout files)
+  layout.mjs  buildSceneFromLayout + resolveLayout (parsed YAML doc → scene + show)
   patterns.mjs  spatial patterns: ribbonChase, worldWipe (world/fixture), planeSweep, normalRGB
   mixer.mjs   the show — crossfade between scenes (auto timeline or manual fader)
   hub.mjs     runs the shade fn, builds ctx (incl. per-instance local()), fans frames out

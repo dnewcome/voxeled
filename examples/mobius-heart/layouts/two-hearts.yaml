@@ -1,0 +1,29 @@
+# voxeled layout — two Möbius hearts, 10 ft apart, with a crossfading show.
+# Edit this file and re-run `npm run demo` (or point VOX_LAYOUT at another file).
+name: two-hearts
+units: mm
+
+# Fixtures: reusable geometry, built by a registered type + params (see run.mjs FIXTURES).
+fixtures:
+  heart:
+    type: mobius-heart
+    params:
+      panelsPerSide: 8
+      pitchMM: 10
+      twist: mobius
+
+# Instances: copies of a fixture placed in shared world space (translation mm, rotation deg).
+# 10 ft = 3048 mm, centred on the origin → ±1524 mm in X.
+instances:
+  - { fixture: heart, name: left,  pos: [-1524, 0, 0] }
+  - { fixture: heart, name: right, pos: [ 1524, 0, 0] }
+
+# Show: scenes the mixer auto-crossfades between. Scenes 2 & 3 are the same wipe in the two
+# coordinate spaces, so the crossfade itself shows the 10-ft gap being accounted for vs ignored.
+show:
+  holdS: 4
+  fadeS: 2.5
+  scenes:
+    - { name: chase (per-heart),        pattern: ribbonChase }
+    - { name: wipe · across (world),    pattern: worldWipe, params: { axis: 0, space: world } }
+    - { name: wipe · synced (fixture),  pattern: worldWipe, params: { axis: 0, space: fixture } }

@@ -1,0 +1,24 @@
+# voxeled layout — four hearts in a row, alternating hearts rotated 180° about Y so they face
+# back the other way. Shows per-instance rotation and that normals rotate with the fixture.
+#   run with:  VOX_LAYOUT=examples/mobius-heart/layouts/facing-hearts.yaml npm run demo
+name: facing-hearts
+units: mm
+
+fixtures:
+  heart:
+    type: mobius-heart
+    params: { panelsPerSide: 6, pitchMM: 12, twist: mobius }
+
+instances:
+  - { fixture: heart, name: h1, pos: [-2286, 0, 0], rotDeg: [0,   0, 0] }
+  - { fixture: heart, name: h2, pos: [ -762, 0, 0], rotDeg: [0, 180, 0] }
+  - { fixture: heart, name: h3, pos: [  762, 0, 0], rotDeg: [0,   0, 0] }
+  - { fixture: heart, name: h4, pos: [ 2286, 0, 0], rotDeg: [0, 180, 0] }
+
+show:
+  holdS: 3
+  fadeS: 2
+  scenes:
+    - { name: across (world),  pattern: worldWipe, params: { axis: 0, space: world } }
+    - { name: normals,         pattern: normalRGB }
+    - { name: chase,           pattern: ribbonChase }

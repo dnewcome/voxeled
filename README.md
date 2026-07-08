@@ -19,7 +19,7 @@ node examples/mobius-heart/run.mjs      # or: npm run demo   (Node ≥18, no dep
 # open http://localhost:8080  ·  drag the crossfader  ·  press N for normals
 ```
 
-Because the heart is generated from a parametric ribbon, voxeled maps it by *evaluating that parametrization* — every LED gets an exact position **and** emission normal (`F = T × D`), no camera scan needed. The default demo places **two hearts 10 ft apart** in one world space and **auto-crossfades a show** across them — including a wipe that accounts for the real gap between them (world space) and a synced version that ignores it (fixture space). Identical frames drive the browser preview and real fixtures over Art-Net/DDP (`ARTNET=host DDP=host …`). Full walkthrough: [`docs/DEMO-mobius-heart.md`](docs/DEMO-mobius-heart.md).
+Because the heart is generated from a parametric ribbon, voxeled maps it by *evaluating that parametrization* — every LED gets an exact position **and** emission normal (`F = T × D`), no camera scan needed. The default demo places **two hearts 10 ft apart** in one world space and **auto-crossfades a show** across them — including a wipe that accounts for the real gap between them (world space) and a synced version that ignores it (fixture space). The rig — how many hearts, where they sit, and the scene list — is a small [YAML layout file](examples/mobius-heart/layouts/two-hearts.yaml) you can edit (`VOX_LAYOUT=…`). Identical frames drive the browser preview and real fixtures over Art-Net/DDP (`ARTNET=host DDP=host …`). Full walkthrough: [`docs/DEMO-mobius-heart.md`](docs/DEMO-mobius-heart.md).
 
 ---
 
