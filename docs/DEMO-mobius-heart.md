@@ -39,6 +39,7 @@ YAML, not env vars. What remains as env:
 | `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` |
 | `ARTNET` | — | host to stream Art-Net to (e.g. `192.168.1.50`) |
 | `DDP` | — | host to stream DDP to (e.g. `192.168.1.60`) |
+| `VOX_LISTEN` | — | TCP port to receive colors from an external source (e.g. TiXL's `VoxeledOutput`); pauses the internal show and drives fixtures + preview from incoming frames |
 
 ```bash
 VOX_LAYOUT=examples/mobius-heart/layouts/grid-3x3.yaml node examples/mobius-heart/run.mjs      # 3×3 matrix, 9 hearts

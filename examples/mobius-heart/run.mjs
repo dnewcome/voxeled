@@ -19,6 +19,7 @@ import { PATTERNS } from "../../src/patterns.mjs";
 import { createArtNetSender } from "../../src/senders/artnet.mjs";
 import { createDDPSender } from "../../src/senders/ddp.mjs";
 import { createDispatcher } from "../../src/output/dispatch.mjs";
+import { createColorInput } from "../../src/input/color-tcp.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
@@ -88,7 +89,19 @@ bus.server.on("error", (e) => {
 });
 
 const hub = createHub({ scene, shade, fps: 30, bus, senders });
-hub.start();
+
+// Drive mode: with VOX_LISTEN set, incoming color frames (e.g. from TiXL's VoxeledOutput) drive
+// the fixtures + preview instead of the internal show.
+const listenPort = process.env.VOX_LISTEN ? +process.env.VOX_LISTEN : 0;
+let input = null;
+if (listenPort) {
+  input = createColorInput({
+    port: listenPort,
+    onFrame: (rgb) => { bus.broadcast(rgb); for (const s of senders) s.send(rgb); },
+  });
+} else {
+  hub.start();
+}
 
 console.log(`♥ voxeled — Möbius LED Heart demo`);
 console.log(`  layout:  ${path.relative(process.cwd(), layoutPath)} — "${scene.name}"`);
@@ -98,10 +111,12 @@ const outDesc = senders.length
   ? senders.map((s) => (s.kind === "dispatch" ? `patch[${s.summary.join(", ")}]` : `${s.kind}→${s.target}`)).join("  ")
   : "none (set ARTNET=host / DDP=host, or add per-fixture `output` in the layout)";
 console.log(`  output:  ${outDesc}`);
+if (listenPort) console.log(`  input:   tcp ${listenPort}  (driven externally — internal show paused)`);
 console.log(`  viewer:  ${bus.url}`);
 
 process.on("SIGINT", () => {
   hub.stop();
+  input?.close();
   bus.close();
   for (const s of senders) s.close();
   console.log("\nbye");

@@ -1,20 +1,20 @@
 # voxeled → TiXL
 
-`LoadVoxeledScene` — a TiXL 4.1 operator that imports a voxeled `.vxl.json` scene as a **Points**
-buffer (world position + emission-normal → orientation), so you can visualize and drive your real
-installation inside TiXL. **Confirmed working** end-to-end on TiXL 4.1 under Wine — a voxeled scene
-renders as points in the TiXL viewport.
+Two operators bridge voxeled and TiXL — voxeled's map stays the source of truth for geometry **and**
+wiring; TiXL supplies the look:
 
-This is the *import* half of the bridge. voxeled's map stays the source of truth; TiXL works with
-it directly. (The *drive-from-TiXL* half — `VoxeledOutput`, streaming colored points back to a
-running voxeled that applies the scene's protocol patch — comes next.)
+- **`LoadVoxeledScene`** — import a `.vxl.json` scene as TiXL **Points** (world position +
+  emission-normal orientation), to visualize/animate the map inside TiXL. ✅ confirmed rendering on
+  TiXL 4.1 under Wine.
+- **`VoxeledOutput`** — stream the colored points back to a running voxeled, which applies the
+  scene's protocol patch (Art-Net + dan-mx + DDP + custom). TiXL never has to know the protocols.
 
 ## Install (hand-authored operator)
 
 Copy the three files into your TiXL user package (they belong to the `dan.MyProject` package):
 
 ```bash
-cp LoadVoxeledScene.cs LoadVoxeledScene.t3 LoadVoxeledScene.t3ui ~/Documents/TiXL/MyProject/
+cp LoadVoxeledScene.* VoxeledOutput.* ~/Documents/TiXL/MyProject/
 ```
 
 Start (or, if running, just refocus) TiXL — it recompiles the package and hot-reloads. The operator
@@ -37,6 +37,22 @@ the package's `.csproj`; all T3/SharpDX types it uses are already global-aliased
 
 Knobs: **ScaleToUnits** `0.001` (voxeled mm → TiXL metres) · **PointSize** (per-point scale) ·
 **FixtureIndex** (−1 = all; ≥0 = only that fixture).
+
+### Drive the sculpture from TiXL (`VoxeledOutput`)
+
+Color the imported points with your TiXL look, then hand them back to voxeled to light the real
+fixtures — voxeled applies the scene's patch, so mixed/custom protocols stay in one place.
+
+1. Run voxeled in **listen mode**: `VOX_LISTEN=9600 node examples/mobius-heart/run.mjs <layout>`
+   (e.g. the `patched.yaml` mixed-protocol rig). It pauses the internal show and drives the fixtures
+   **and** browser preview from incoming frames.
+2. In TiXL, wire your colored **`Points → VoxeledOutput`** and set **Host**/**Port** to match
+   (default `127.0.0.1:9600`).
+3. voxeled receives the RGB frame (scene order) and fans it out per the patch — Art-Net + dan-mx +
+   DDP, all at once.
+
+Wire format: length-prefixed RGB frames over TCP. Points must be in **scene order**
+(`LoadVoxeledScene` → color ops that preserve order → `VoxeledOutput`).
 
 ### Grouping points into fixtures
 
@@ -86,8 +102,10 @@ WINEPREFIX=~/.wine-tixl T3_ASSEMBLY_PATH='C:\Program Files\TiXL\TiXL 4.1.0.9-alp
 
 ## Notes / status
 
-- **Confirmed rendering** in TiXL 4.1 under Wine; compiles clean (0 warnings/errors, verified via the
-  `wine dotnet build` above — the DLL contains `LoadVoxeledScene`).
+- Both operators **compile clean** (0/0, verified via `wine dotnet build`; the DLL contains
+  `LoadVoxeledScene` + `VoxeledOutput`). `LoadVoxeledScene` is **confirmed rendering** in TiXL 4.1;
+  `VoxeledOutput` is verified against the voxeled TCP receiver (`test/color-input.test.mjs`) — try it
+  live in your TiXL graph.
 - **GUIDs are stable** — don't change them; the `.t3`/`.t3ui` are keyed to them.
 - The operator **caches its GPU buffer** (keyed on path/scale/size/fixture) — no per-frame rebuild;
   it logs `voxeled: loaded N points …` once per (re)load.

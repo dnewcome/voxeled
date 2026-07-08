@@ -117,10 +117,10 @@ export const wave = ({ x, y, z }, t) =>
 
 - **TiXL** ([`integrations/tixl/`](integrations/tixl/)) — a `LoadVoxeledScene` operator imports a
   `.vxl` scene as TiXL **Points** (world position + emission-normal orientation), so you author and
-  animate the map with TiXL's own effects and drive it through TiXL's native Art-Net — or, soon, hand
-  colored points back to voxeled for the full mixed-protocol patch. Each point carries its fixture
-  index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can group per fixture. **Confirmed
-  rendering on TiXL 4.1.**
+  animate the map with TiXL's own effects and drive it through TiXL's native Art-Net — or hand
+  colored points back to voxeled (`VoxeledOutput` → `VOX_LISTEN`) for the full mixed-protocol patch.
+  Each point carries its fixture index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can
+  group per fixture. **Confirmed rendering on TiXL 4.1.**
 - **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
 - **Protocols** — Art-Net, DDP, and **[dan-mx](https://github.com/dnewcome/dan-mx)** (a custom IP LED
   protocol), all driven from one patched scene.

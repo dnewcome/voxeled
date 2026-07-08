@@ -1,0 +1,47 @@
+{
+  "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b40"/*VoxeledOutput*/,
+  "Description": "Stream colored points to a running voxeled (VOX_LISTEN=<port>). voxeled applies the scene's protocol patch — Art-Net + dan-mx + DDP. Wire in points in scene order (from LoadVoxeledScene).",
+  "InputUis": [
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b42"/*Points*/,
+      "Relevancy": "Required",
+      "Position": {
+        "X": -220.0,
+        "Y": 0.0
+      }
+    },
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b43"/*Host*/,
+      "Position": {
+        "X": -220.0,
+        "Y": 45.0
+      },
+      "Description": "voxeled host (IP)."
+    },
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b44"/*Port*/,
+      "Position": {
+        "X": -220.0,
+        "Y": 90.0
+      },
+      "Description": "voxeled VOX_LISTEN TCP port."
+    },
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b45"/*Enabled*/,
+      "Position": {
+        "X": -220.0,
+        "Y": 135.0
+      }
+    }
+  ],
+  "SymbolChildUis": [],
+  "OutputUis": [
+    {
+      "OutputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b41"/*Output*/,
+      "Position": {
+        "X": 60.0,
+        "Y": 0.0
+      }
+    }
+  ]
+}

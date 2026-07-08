@@ -1,0 +1,23 @@
+{
+  "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b40"/*VoxeledOutput*/,
+  "Inputs": [
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b42"/*Points*/,
+      "DefaultValue": null
+    },
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b43"/*Host*/,
+      "DefaultValue": "127.0.0.1"
+    },
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b44"/*Port*/,
+      "DefaultValue": 9600
+    },
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b45"/*Enabled*/,
+      "DefaultValue": true
+    }
+  ],
+  "Children": [],
+  "Connections": []
+}
