@@ -160,15 +160,15 @@ The heart's panels are HUB75 (or a transparent SPI film). voxeled stays protocol
 
 ## Verified
 
-Headless checks (`✅ 57/57` across four suites): mapper emits unit normals with real 3D depth
-from the twist; Art-Net framing (header, opcode `0x5000`, universe paging) and DDP framing
-(version/PUSH flags, offset, length); the WebSocket bus (RFC-6455 handshake + full-frame binary
-delivery); multi-instance placement + `ctx.local()` re-basing; `worldWipe` treating world vs
-fixture space differently; the mixer crossfade (endpoints, midpoint, auto timeline); the
-`/control` endpoint mutating the fader; the YAML-subset parser (scalars, flow, quoting, comments,
-nested + seq-of-map, plus both real layout files); and `resolveLayout` (fixtures/instances/show +
-error handling). The browser render is the one piece a headless run can't exercise — its data
-contract (fetch `scene.json` + binary WS frames + `GET /control`) is what those checks cover.
+Run `npm test` — **58 checks across five suites** (`test/`): the mapper's unit normals + twist
+depth; Art-Net framing (header, opcode `0x5000`, universe paging) and DDP framing (version/PUSH
+flags, offset, length); the WebSocket bus (RFC-6455 handshake + full-frame binary delivery);
+multi-instance placement + `ctx.local()` re-basing; `worldWipe` world-vs-fixture; the mixer
+crossfade (endpoints, midpoint, auto timeline); the `/control` endpoint; the YAML-subset parser +
+`resolveLayout` (both real layout files + error handling); and — the piece that used to be
+unverifiable — a **headless-Chrome render gate** that boots the viewer, asserts it built its
+geometry (the `VOXELED_READY` console signal) with no errors, and confirms it loads **offline**
+(no CDN). The gate skips cleanly if Chrome isn't installed. The browser render is covered now too.
 
 ## Files
 
@@ -189,4 +189,6 @@ src/
   senders/artnet.mjs, senders/ddp.mjs   UDP output
   vec.mjs     tiny 3-vector + rotation-matrix helpers
 viewer/index.html   three.js point-cloud viewer + crossfader (subscribes to the bus)
+viewer/vendor/      three.js + OrbitControls, vendored locally (no CDN — runs offline)
+test/               `npm test` — logic suites + a headless-Chrome render gate
 ```

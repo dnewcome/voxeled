@@ -40,3 +40,6 @@ captures/
 
 # Generated scenes (regenerate with `npm run map`)
 *.vxl.json
+
+# Test artifacts (screenshots, chrome profile)
+test/artifacts/

@@ -66,8 +66,8 @@ function controlHandler(req, res, params) {
 
 const bus = createBus({
   port: PORT,
+  staticDir: path.join(HERE, "../../viewer"), // serves index.html + vendored three.js
   routes: [
-    { path: "/", file: path.join(HERE, "../../viewer/index.html"), contentType: "text/html; charset=utf-8" },
     { path: "/scene.json", content: sceneJSON, contentType: "application/json" },
     { path: "/control", handler: controlHandler },
   ],

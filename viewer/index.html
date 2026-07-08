@@ -34,8 +34,7 @@
 </style>
 <script type="importmap">
 { "imports": {
-  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  "three": "./vendor/three.module.js"
 } }
 </script>
 </head>
@@ -58,7 +57,7 @@
 
 <script type="module">
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { OrbitControls } from "./vendor/OrbitControls.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -139,6 +138,7 @@ async function boot() {
   controls.update();
 
   connectBus();
+  console.log("VOXELED_READY", N); // headless render gate looks for this
 }
 
 // ── the normalized pixel bus ──────────────────────────────────────────────────
@@ -202,7 +202,7 @@ function loop() {
   renderer.render(scene3, camera);
 }
 loop();
-boot().catch((e) => { $("h-name").textContent = "load error"; console.error(e); });
+boot().catch((e) => { $("h-name").textContent = "load error"; console.error("VOXELED_ERROR", e); });
 </script>
 </body>
 </html>

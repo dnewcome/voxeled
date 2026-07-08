@@ -7,7 +7,19 @@
 // Minimal RFC-6455 server: HTTP upgrade + unmasked binary broadcast frames. No external deps.
 import http from "node:http";
 import crypto from "node:crypto";
-import { readFileSync } from "node:fs";
+import path from "node:path";
+import { readFileSync, existsSync, statSync } from "node:fs";
+
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".json": "application/json",
+  ".css": "text/css",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+};
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const accept = (key) => crypto.createHash("sha1").update(key + WS_GUID).digest("base64");
@@ -29,22 +41,46 @@ function encodeBinary(payload) {
 }
 
 // routes: [{ path, file?, content?, contentType }]. `content` may be a Buffer/string served from memory.
-export function createBus({ port = 8080, wsPath = "/bus", routes = [] } = {}) {
+export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir = null } = {}) {
   const clients = new Set();
+  const staticRoot = staticDir ? path.resolve(staticDir) : null;
 
   const server = http.createServer((req, res) => {
     const u = new URL(req.url, "http://localhost");
+
+    // Explicit routes take precedence (in-memory content, handlers).
     const route = routes.find((r) => r.path === u.pathname);
-    if (!route) { res.writeHead(404); res.end("not found"); return; }
-    if (route.handler) { route.handler(req, res, u.searchParams); return; } // control endpoints
-    let body;
-    try {
-      body = route.content != null ? route.content : readFileSync(route.file);
-    } catch (e) {
-      res.writeHead(500); res.end(String(e)); return;
+    if (route) {
+      if (route.handler) { route.handler(req, res, u.searchParams); return; }
+      let body;
+      try {
+        body = route.content != null ? route.content : readFileSync(route.file);
+      } catch (e) {
+        res.writeHead(500); res.end(String(e)); return;
+      }
+      res.writeHead(200, { "Content-Type": route.contentType || "application/octet-stream" });
+      res.end(body);
+      return;
     }
-    res.writeHead(200, { "Content-Type": route.contentType || "application/octet-stream" });
-    res.end(body);
+
+    // Static files from staticDir (e.g. the viewer + its vendored three.js).
+    if (staticRoot) {
+      let rel = decodeURIComponent(u.pathname);
+      if (rel === "/" || rel === "") rel = "/index.html";
+      const resolved = path.resolve(path.join(staticRoot, rel));
+      if (resolved === staticRoot || resolved.startsWith(staticRoot + path.sep)) {
+        try {
+          if (existsSync(resolved) && statSync(resolved).isFile()) {
+            res.writeHead(200, { "Content-Type": MIME[path.extname(resolved)] || "application/octet-stream" });
+            res.end(readFileSync(resolved));
+            return;
+          }
+        } catch { /* fall through to 404 */ }
+      }
+    }
+
+    res.writeHead(404);
+    res.end("not found");
   });
 
   server.on("upgrade", (req, socket) => {
