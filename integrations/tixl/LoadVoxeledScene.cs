@@ -37,6 +37,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
             rawPath = Environment.GetEnvironmentVariable("VOXELED_SCENE");
         var scale = ScaleToUnits.GetValue(context);
         var size = PointSize.GetValue(context);
+        var fixtureIndex = FixtureIndex.GetValue(context);
 
         if (string.IsNullOrWhiteSpace(rawPath))
         {
@@ -50,7 +51,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
 
         // Already loaded this exact config? Re-emit the cached buffer — do NOT rebuild every frame
         // (rebuilding disposes the buffer DrawPoints is mid-render on → red op + nothing drawn).
-        var key = $"{path}|{scale}|{size}";
+        var key = $"{path}|{scale}|{size}|{fixtureIndex}";
         if (key == _loadedKey)
         {
             Points.Value = _buffer!;
@@ -68,7 +69,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
 
         try
         {
-            var points = Parse(File.ReadAllText(path), scale, size);
+            var points = Parse(File.ReadAllText(path), scale, size, fixtureIndex);
             if (points.Length == 0)
             {
                 Log.Warning($"voxeled: no pixels in {path}", this);
@@ -92,16 +93,18 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
     }
 
     // Parse a voxeled .vxl.json into Points. Uses only pixels[].p (position, mm) and .n (normal).
-    private static Point[] Parse(string json, float scale, float size)
+    private static Point[] Parse(string json, float scale, float size, int fixtureIndex)
     {
         using var doc = JsonDocument.Parse(json);
         if (!doc.RootElement.TryGetProperty("pixels", out var pixels) || pixels.ValueKind != JsonValueKind.Array)
             return Array.Empty<Point>();
 
-        var points = new Point[pixels.GetArrayLength()];
-        var i = 0;
+        var points = new List<Point>(pixels.GetArrayLength());
         foreach (var px in pixels.EnumerateArray())
         {
+            var inst = px.TryGetProperty("inst", out var ie) && ie.ValueKind == JsonValueKind.Number ? ie.GetInt32() : 0;
+            if (fixtureIndex >= 0 && inst != fixtureIndex) continue; // keep only the requested fixture
+
             var p = px.GetProperty("p");
             var pos = new Vector3((float)p[0].GetDouble(), (float)p[1].GetDouble(), (float)p[2].GetDouble()) * scale;
 
@@ -109,17 +112,17 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
             if (px.TryGetProperty("n", out var n) && n.ValueKind == JsonValueKind.Array && n.GetArrayLength() == 3)
                 normal = new Vector3((float)n[0].GetDouble(), (float)n[1].GetDouble(), (float)n[2].GetDouble());
 
-            points[i++] = new Point
+            points.Add(new Point
             {
                 Position = pos,
                 Orientation = OrientationFromNormal(normal),
                 Color = new Vector4(1, 1, 1, 1),
                 Scale = new Vector3(size),
                 F1 = 1f,
-                F2 = 0f,
-            };
+                F2 = inst, // fixture/instance index — FilterPoints/SelectPoints on F2 to group by fixture
+            });
         }
-        return points;
+        return points.ToArray();
     }
 
     // Quaternion that rotates +Z onto the emission normal, so PointsToDmxLights (and the viewport)
@@ -145,4 +148,7 @@ public sealed class LoadVoxeledScene : Instance<LoadVoxeledScene>, IDescriptiveF
 
     [Input(Guid = "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b34")]
     public readonly InputSlot<float> PointSize = new(0.02f);
+
+    [Input(Guid = "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b35")]
+    public readonly InputSlot<int> FixtureIndex = new(-1); // -1 = all fixtures; ≥0 = only that instance
 }

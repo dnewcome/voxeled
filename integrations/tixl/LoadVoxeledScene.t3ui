@@ -26,6 +26,14 @@
         "Y": 135.0
       },
       "Description": "Display size stored on each point."
+    },
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b35"/*FixtureIndex*/,
+      "Position": {
+        "X": -200.0,
+        "Y": 180.0
+      },
+      "Description": "-1 = all fixtures; ≥0 = only that instance. (Each point's F2 also carries its fixture index for FilterPoints/SelectPoints.)"
     }
   ],
   "SymbolChildUis": [],
