@@ -1,0 +1,41 @@
+{
+  "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b30"/*LoadVoxeledScene*/,
+  "Description": "Load a voxeled .vxl.json scene as points (world position + emission-normal orientation). Feed into PointsToDmxLights → ArtnetOutput, or colour the points.",
+  "InputUis": [
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b32"/*FilePath*/,
+      "Relevancy": "Required",
+      "Position": {
+        "X": -200.0,
+        "Y": 45.0
+      },
+      "Description": "Absolute path to a voxeled .vxl.json scene file."
+    },
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b33"/*ScaleToUnits*/,
+      "Position": {
+        "X": -200.0,
+        "Y": 90.0
+      },
+      "Description": "Scale from voxeled millimetres to TiXL units (0.001 = mm → metres)."
+    },
+    {
+      "InputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b34"/*PointSize*/,
+      "Position": {
+        "X": -200.0,
+        "Y": 135.0
+      },
+      "Description": "Display size stored on each point."
+    }
+  ],
+  "SymbolChildUis": [],
+  "OutputUis": [
+    {
+      "OutputId": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b31"/*Points*/,
+      "Position": {
+        "X": 60.0,
+        "Y": 45.0
+      }
+    }
+  ]
+}

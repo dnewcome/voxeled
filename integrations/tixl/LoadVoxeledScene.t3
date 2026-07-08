@@ -1,0 +1,19 @@
+{
+  "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b30"/*LoadVoxeledScene*/,
+  "Inputs": [
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b32"/*FilePath*/,
+      "DefaultValue": ""
+    },
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b33"/*ScaleToUnits*/,
+      "DefaultValue": 0.001
+    },
+    {
+      "Id": "b0f4d2a1-9c3e-4a7b-8d16-2f5e7c9a1b34"/*PointSize*/,
+      "DefaultValue": 0.02
+    }
+  ],
+  "Children": [],
+  "Connections": []
+}
