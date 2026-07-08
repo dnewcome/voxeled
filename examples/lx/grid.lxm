@@ -1,0 +1,46 @@
+{
+  "version": "voxeled-example",
+  "timestamp": 0,
+  "fixtures": [
+    {
+      "id": 1,
+      "class": "heronarts.lx.structure.GridFixture",
+      "parameters": {
+        "label": "Grid A", "x": 0.0, "y": 0.0, "z": 0.0,
+        "yaw": 0.0, "pitch": 0.0, "roll": 0.0, "scale": 1.0,
+        "protocol": 0, "byteOrder": 0, "transport": 0, "host": "127.0.0.1", "port": 7890,
+        "numRows": 4, "numColumns": 4, "rowSpacing": 10.0, "columnSpacing": 10.0, "wiring": 0
+      },
+      "children": {}
+    },
+    {
+      "id": 2,
+      "class": "heronarts.lx.structure.GridFixture",
+      "parameters": {
+        "label": "Grid B", "x": 0.0, "y": 0.0, "z": 20.0,
+        "yaw": 0.0, "pitch": 0.0, "roll": 0.0, "scale": 1.0,
+        "protocol": 0, "byteOrder": 0, "transport": 0, "host": "127.0.0.1", "port": 7890,
+        "numRows": 4, "numColumns": 4, "rowSpacing": 10.0, "columnSpacing": 10.0, "wiring": 0
+      },
+      "children": {}
+    },
+    {
+      "id": 3,
+      "class": "heronarts.lx.structure.GridFixture",
+      "parameters": {
+        "label": "Grid C (wired)", "x": 0.0, "y": 0.0, "z": 40.0,
+        "yaw": 0.0, "pitch": 0.0, "roll": 0.0, "scale": 1.0,
+        "protocol": 1, "byteOrder": 0, "transport": 0, "host": "10.0.0.5", "port": 6454,
+        "artNetUniverse": 2, "dmxChannel": 0,
+        "numRows": 4, "numColumns": 4, "rowSpacing": 10.0, "columnSpacing": 10.0, "wiring": 0
+      },
+      "children": {}
+    },
+    {
+      "id": 4,
+      "class": "heronarts.lx.structure.JsonFixture",
+      "parameters": { "label": "A Cube", "fixtureType": "Examples/Cube", "jsonFixtureType": "Examples/Cube", "x": 100.0, "y": 0.0, "z": 0.0 },
+      "children": {}
+    }
+  ]
+}

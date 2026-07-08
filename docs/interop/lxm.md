@@ -98,12 +98,26 @@ Near 1:1 with voxeled's **layout + patch**:
 So a `.lxm` importer produces a voxeled scene: one voxeled instance per LX fixture, geometry from
 the class/`.lxf`, patch mapped to `output`, normals estimated.
 
-## Importer scope (for `src/io/lxm-import.mjs`)
+## Importer — `src/io/lxm-import.mjs`
 
-- **Built-in classes** (`GridFixture`, `PointFixture`, `StripFixture`, `ArcFixture`) — direct
-  geometry from params. GridFixture is trivial; the rest are small.
-- **`JsonFixture`** — parse the referenced `.lxf`, run a small **expression evaluator**, and
-  generate each component type (`Square`/`Strip`/`Arc`/`Point`/`Points` + nested). This is the bulk
-  of the work; the expression evaluator is the crux.
-- **Patch** — decode the `protocol`/`byteOrder` enums (from the LX source) → voxeled `output`.
-- **Normals** — LX has none; estimate (the same fallback as the glTF importer).
+```bash
+node src/io/lxm-import.mjs <in.lxm> [out.vxl.json]      # → a voxeled scene
+```
+
+**Tier 1 — built-in fixture classes (done).** Parses the `.lxm`, generates geometry for
+`GridFixture` (the only structural built-in that appears in real Chromatik rigs), maps each
+fixture's transform + patch to a voxeled instance + `output`, and **assigns a normal** (local `+Z`)
+since LX stores none. Anything else (`JsonFixture`, …) is **reported, never fabricated** — the CLI
+tells you exactly what needs tier 2. Verified against `~/Chromatik/Models/Examples/Grid3D.lxm`
+(10 grids → 4000 points) and covered by `test/lxm-import.test.mjs` (18 checks); a hand-authored
+example lives at `examples/lx/grid.lxm`.
+
+Patch mapping: LX enum ordinals → voxeled (`protocol` 0 = none → unwired; 1 ≈ Art-Net → `universe`
+/`channel`; 3 ≈ DDP → `offset`; …). The ordering is **best-effort** — the raw ordinals are kept
+under `output.raw` so nothing is lost until confirmed against the LX source. `scale` is baked into
+local geometry; `wiring` (serpentine) only reorders indices and is a tier-2 refinement.
+
+**Tier 2 — `JsonFixture` (`.lxf`), pending.** Parse the referenced `.lxf`, run a small **expression
+evaluator** (numbers, `$vars`, `+ - * /`, parens), and generate each component type
+(`Square`/`Strip`/`Arc`/`Point`/`Points` + nested). This is the bulk of the remaining work; the
+expression evaluator is the crux. It unlocks `Cubes.lxm` and most real custom rigs.

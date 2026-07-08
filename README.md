@@ -122,6 +122,10 @@ export const wave = ({ x, y, z }, t) =>
   Each point carries its fixture index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can
   group per fixture. **Confirmed rendering on TiXL 4.1.**
 - **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
+- **LX Studio / Chromatik** — import a `.lxm` model into voxeled (`src/io/lxm-import.mjs`); its
+  fixtures, transforms, and per-fixture output patch become a voxeled scene — and voxeled *assigns
+  the emission normals LX discards*. Tier 1 (built-in `GridFixture`) works today; `JsonFixture`
+  (`.lxf`) is next. Format reverse-engineered in [`docs/interop/lxm.md`](docs/interop/lxm.md).
 - **Protocols** — Art-Net, DDP, and **[dan-mx](https://github.com/dnewcome/dan-mx)** (a custom IP LED
   protocol), all driven from one patched scene.
 
