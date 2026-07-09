@@ -36,7 +36,7 @@ YAML, not env vars. What remains as env:
 | var | default | effect |
 |---|---|---|
 | `VOX_LAYOUT` | `…/layouts/two-hearts.yaml` | which YAML layout to load |
-| `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` |
+| `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` \| `spotlight` \| `projector` |
 | `ARTNET` | — | host to stream Art-Net to (e.g. `192.168.1.50`) |
 | `DDP` | — | host to stream DDP to (e.g. `192.168.1.60`) |
 | `VOX_LISTEN` | — | TCP port to receive colors from an external source (e.g. TiXL's `VoxeledOutput`); pauses the internal show and drives fixtures + preview from incoming frames |
@@ -97,6 +97,11 @@ both land in the same scene shape (`position + normal + address`).
   the animation is *spatial*, reading correctly across the non-flat, twisting ribbon.
 - **`normalRGB`** — paints each pixel's emission normal as colour (x,y,z → r,g,b). Always lit; the
   colour field you see *is* the emission-direction field — the direct visual proof the map is right.
+- **`spotlight`** — lights only the pixels a virtual camera can **see** — occluded strands (hidden
+  behind the piece) and back-facing pixels go dark — as the vantage orbits. The Thread "in and out of
+  view" problem, computed instead of hand-managed. See [`visibility.md`](visibility.md).
+- **`projector`** — projection-maps a scrolling texture *through* that camera onto the visible
+  surface (occlusion respected) — a preview of a VJ jacking a framebuffer into the piece.
 
 ## Multiple instances & the "account for distance" toggle
 

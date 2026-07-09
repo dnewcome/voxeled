@@ -62,4 +62,45 @@ export function worldWipe({ axis = 0, speedMM = 700, spacingMM = 1600, widthMM =
   };
 }
 
-export const PATTERNS = { ribbonChase, worldWipe, planeSweep, normalRGB };
+// ── visibility patterns: "the piece as a real object seen from a vantage" ──────────────
+// Both run one whole-scene depth pass per frame (cached on ctx.frame — the hub renders pixels in
+// order, so the first pixel of each frame computes it and the rest reuse it), then read per-pixel.
+import { frameCamera, computeVisibility } from "./visibility.mjs";
+
+// A helper that recomputes visibility once per frame for an orbiting auto-framed camera.
+function perFrameVisibility({ orbitDegPerSec = 12, angleDeg = 20, elevDeg = 14, fovDeg = 55, res = 128, splat = 2, backface = true }) {
+  let cachedFrame = -1, vis = null;
+  return (t, ctx) => {
+    if (ctx.frame !== cachedFrame || !vis) {
+      const cam = frameCamera(ctx.scene, { angleDeg: angleDeg + orbitDegPerSec * t, elevDeg, fovDeg });
+      vis = computeVisibility(ctx.scene, cam, { width: res, height: res, splat, backface });
+      cachedFrame = ctx.frame;
+    }
+    return vis;
+  };
+}
+
+// Light only the pixels the camera can SEE — occluded strands (hidden behind the piece) and
+// back-facing pixels go dark. Orbit the vantage and LEDs wink in and out as the sculpture turns:
+// the Thread problem, computed instead of hand-managed. Front-facing brightness falls off at grazing.
+export function spotlight({ orbitDegPerSec = 12, angleDeg = 20, elevDeg = 14, fovDeg = 55, res = 128, splat = 2, hue = 0.13, hidden = [0.03, 0, 0] } = {}) {
+  const vis = perFrameVisibility({ orbitDegPerSec, angleDeg, elevDeg, fovDeg, res, splat, backface: true });
+  return (px, t, ctx) => {
+    const v = vis(t, ctx)[px.i];
+    if (!v || !v.visible) return hidden; // occluded or facing away
+    return hsv(hue, 0.5, clamp01(0.35 + 0.65 * v.facing)); // grazing angles dimmer
+  };
+}
+
+// Projection-map a scrolling texture through the camera onto the visible surface — voxeled as the
+// house system a VJ jacks into: a 2D frame sampled onto the real 3D piece, occlusion respected.
+export function projector({ orbitDegPerSec = 0, angleDeg = 20, elevDeg = 14, fovDeg = 55, res = 128, splat = 2, scroll = 0.12, off = [0, 0, 0] } = {}) {
+  const vis = perFrameVisibility({ orbitDegPerSec, angleDeg, elevDeg, fovDeg, res, splat, backface: true });
+  const tex = (u, v, t) => hsv(u + t * scroll, 0.9, clamp01(1 - Math.abs(v - 0.5) * 1.3)); // a scrolling horizontal band
+  return (px, t, ctx) => {
+    const p = vis(t, ctx)[px.i];
+    return p && p.visible ? tex(p.uv[0], p.uv[1], t) : off;
+  };
+}
+
+export const PATTERNS = { ribbonChase, worldWipe, planeSweep, normalRGB, spotlight, projector };
