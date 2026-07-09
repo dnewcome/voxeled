@@ -124,8 +124,10 @@ export const wave = ({ x, y, z }, t) =>
 - **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
 - **LX Studio / Chromatik** — import a `.lxm` model into voxeled (`src/io/lxm-import.mjs`); its
   fixtures, transforms, and per-fixture output patch become a voxeled scene — and voxeled *assigns
-  the emission normals LX discards*. Tier 1 (built-in `GridFixture`) works today; `JsonFixture`
-  (`.lxf`) is next. Format reverse-engineered in [`docs/interop/lxm.md`](docs/interop/lxm.md).
+  the emission normals LX discards* (a Chromatik cube imports with its four correct outward face
+  normals). Handles built-in `GridFixture` **and** `JsonFixture` `.lxf` templates — a small
+  expression evaluator generates their `strip`/recursive geometry. Verified on stock Chromatik rigs;
+  format reverse-engineered in [`docs/interop/lxm.md`](docs/interop/lxm.md).
 - **Protocols** — Art-Net, DDP, and **[dan-mx](https://github.com/dnewcome/dan-mx)** (a custom IP LED
   protocol), all driven from one patched scene.
 

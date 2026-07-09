@@ -1,0 +1,16 @@
+{
+  "version": "voxeled-example",
+  "timestamp": 0,
+  "fixtures": [
+    {
+      "id": 1,
+      "class": "heronarts.lx.structure.JsonFixture",
+      "parameters": {
+        "label": "Cube 1", "fixtureType": "Cube", "jsonFixtureType": "Cube",
+        "x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0, "roll": 0.0, "scale": 1.0,
+        "protocol": 0
+      },
+      "children": {}
+    }
+  ]
+}

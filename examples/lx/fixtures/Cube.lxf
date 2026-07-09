@@ -1,0 +1,19 @@
+{
+  "label": "Cube",
+  "tag": "cube",
+  "parameters": {
+    "size": { "type": "float", "label": "Size", "default": 100, "min": 0 },
+    "pointsPerEdge": { "type": "int", "label": "Points", "default": 4, "min": 2 },
+    "padding": { "type": "float", "label": "Padding", "default": 3, "min": 0 },
+    "caps": { "type": "boolean", "label": "Caps", "default": false }
+  },
+  "components": [
+    /* four sides, then optional top/bottom caps — a Cube is six Squares (recursive fixture ref) */
+    { "type": "Square", "tag": "front",  "x": "$padding",            "y": "$padding", "z": 0,                   "size": "$size", "pointsPerEdge": "$pointsPerEdge" },
+    { "type": "Square", "tag": "right",  "x": "$size + 2*$padding",  "y": "$padding", "z": "$padding",          "yaw": -90,  "size": "$size", "pointsPerEdge": "$pointsPerEdge" },
+    { "type": "Square", "tag": "back",   "x": "$size + $padding",    "y": "$padding", "z": "$size + 2*$padding", "yaw": -180, "size": "$size", "pointsPerEdge": "$pointsPerEdge" },
+    { "type": "Square", "tag": "left",   "x": 0,                     "y": "$padding", "z": "$size + $padding",   "yaw": -270, "size": "$size", "pointsPerEdge": "$pointsPerEdge" },
+    { "type": "Square", "tag": "top",    "enabled": "$caps", "x": "$padding", "y": "$size + 2*$padding", "z": "$padding",        "pitch": 90,  "size": "$size", "pointsPerEdge": "$pointsPerEdge" },
+    { "type": "Square", "tag": "bottom", "enabled": "$caps", "x": "$padding", "y": 0,                    "z": "$size + $padding", "pitch": -90, "size": "$size", "pointsPerEdge": "$pointsPerEdge" }
+  ]
+}

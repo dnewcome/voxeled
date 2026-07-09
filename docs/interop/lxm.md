@@ -101,7 +101,7 @@ the class/`.lxf`, patch mapped to `output`, normals estimated.
 ## Importer — `src/io/lxm-import.mjs`
 
 ```bash
-node src/io/lxm-import.mjs <in.lxm> [out.vxl.json]      # → a voxeled scene
+node src/io/lxm-import.mjs <in.lxm> [out.vxl.json] [--fixtures <LX Fixtures dir>]
 ```
 
 **Tier 1 — built-in fixture classes (done).** Parses the `.lxm`, generates geometry for
@@ -117,7 +117,25 @@ Patch mapping: LX enum ordinals → voxeled (`protocol` 0 = none → unwired; 1 
 under `output.raw` so nothing is lost until confirmed against the LX source. `scale` is baked into
 local geometry; `wiring` (serpentine) only reorders indices and is a tier-2 refinement.
 
-**Tier 2 — `JsonFixture` (`.lxf`), pending.** Parse the referenced `.lxf`, run a small **expression
-evaluator** (numbers, `$vars`, `+ - * /`, parens), and generate each component type
-(`Square`/`Strip`/`Arc`/`Point`/`Points` + nested). This is the bulk of the remaining work; the
-expression evaluator is the crux. It unlocks `Cubes.lxm` and most real custom rigs.
+**Tier 2 — `JsonFixture` (`.lxf`), done.** Resolves the referenced `.lxf` (pass `--fixtures` /
+`fixturesDir` to point at the LX `Fixtures/` root), tolerates JSONC (`/* */`, `//`, trailing
+commas), and generates its geometry:
+
+- **Expression evaluator** (`src/io/lxf-expr.mjs`) — a hand-written parser (no `eval()`) for the
+  `$param` arithmetic in `.lxf` fields: numbers, `$vars`, `+ - * / %`, unary ±, parens, and
+  functions. **Trig is in degrees** (the decisive case: `Fan.lxf` spans `$degrees` via `cos()`).
+- **Components** — the `strip` primitive (points along local +X), `point`, and **recursive fixture
+  refs** (a `Cube` is six `Square`s, each four `strip`s); `instances` repeats a component with
+  `$instance` bound; component/transform `enabled` is honored (e.g. a Cube's `caps`); a fixture's
+  `transforms` apply last; matching fields pass params down to nested fixtures.
+- **Normals** — assigned as each fixture's local +Z carried through every transform. For a `Cube`
+  that yields the **four correct outward face normals** LX never stored — the whole thesis in one
+  import.
+
+Verified against `~/Chromatik/Models/Examples/Cubes.lxm` (73 `JsonFixture`s → 17 520 points) and
+each stock `.lxf` (`Square`, `Cube`, `Fan`, `Winding`, `SpikySphere`). Covered by
+`test/lxf-expr.test.mjs` (18) + the tier-2 half of `test/lxm-import.test.mjs`; self-contained
+examples live in `examples/lx/` (`cube.lxm` + `fixtures/{Square,Cube}.lxf`).
+
+**Not yet:** the `arc` primitive (absent from the stock fixtures — add when a sample needs it) and
+LX `wiring`/`tags` (index order + grouping, not positions).
