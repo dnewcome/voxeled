@@ -5,7 +5,7 @@
 import dgram from "node:dgram";
 import { artDmxPacket } from "../senders/artnet.mjs";
 import { ddpPacket } from "../senders/ddp.mjs";
-import { sendDanmx } from "../senders/danmx.mjs";
+import { DanmxStream, danmxOpts } from "../senders/danmx.mjs";
 
 // Byte orders: index into source [r,g,b]; -1 = white = min(r,g,b).
 const ORDERS = {
@@ -22,9 +22,10 @@ export function createDispatcher(scene, { customProtocols = {} } = {}) {
   instances.forEach((inst, k) => {
     const o = inst.output;
     if (!o || !o.protocol || !o.host) return;
+    const protocol = String(o.protocol).toLowerCase();
     plans.push({
       name: inst.name || `inst-${k}`,
-      protocol: String(o.protocol).toLowerCase(),
+      protocol,
       indices: groups[k],
       host: o.host,
       port: o.port,
@@ -33,6 +34,8 @@ export function createDispatcher(scene, { customProtocols = {} } = {}) {
       offset: o.offset | 0,
       startPixel: o.startPixel | 0,
       order: ORDERS[String(o.byteOrder || "rgb").toLowerCase()] || ORDERS.rgb,
+      // dan-mx keeps a stateful stream (RLE/DELTA need a reference across frames)
+      stream: protocol === "danmx" ? new DanmxStream({ ...danmxOpts(o), startPixel: o.startPixel | 0 }) : null,
     });
   });
 
@@ -73,7 +76,7 @@ export function createDispatcher(scene, { customProtocols = {} } = {}) {
         if (d.buf.length < end) { const nb = Buffer.alloc(end); d.buf.copy(nb); d.buf = nb; }
         bytes.copy(d.buf, p.offset);
       } else if (p.protocol === "danmx") {
-        sendDanmx(sock, p.host, p.port || 6454, pack(p.indices, rgb, ORDERS.rgb), seq, p.startPixel);
+        for (const wire of p.stream.frames(pack(p.indices, rgb, ORDERS.rgb), seq)) sock.send(wire, p.port || 6454, p.host);
       } else if (customProtocols[p.protocol]) {
         customProtocols[p.protocol](sock, p, pack(p.indices, rgb, p.order), seq);
       }

@@ -129,7 +129,8 @@ export const wave = ({ x, y, z }, t) =>
   expression evaluator generates their `strip`/recursive geometry. Verified on stock Chromatik rigs;
   format reverse-engineered in [`docs/interop/lxm.md`](docs/interop/lxm.md).
 - **Protocols** — Art-Net, DDP, and **[dan-mx](https://github.com/dnewcome/dan-mx)** (a custom IP LED
-  protocol), all driven from one patched scene.
+  protocol, with opt-in RLE/DELTA compression + in-band colour space & transfer), all driven from one
+  patched scene. See [`docs/interop/protocols.md`](docs/interop/protocols.md) for the whole family.
 
 ## Where voxeled sits
 
