@@ -91,6 +91,36 @@ function estimatePitch(pixels) {
   return +(dists[Math.floor(dists.length / 2)] || 20).toFixed(2);
 }
 
+// All TRIANGLE geometry of a GLB as a flat soup (9 floats per triangle, node transforms applied,
+// scaled to mm) — for the mesh/chip-island importer. POINTS/LINES primitives are skipped.
+export function gltfToTriangles(buffer, { scaleToMM = 1000 } = {}) {
+  const { gltf, bin } = parseGLB(buffer);
+  const scene = gltf.scenes?.[gltf.scene ?? 0] || { nodes: gltf.nodes?.map((_, i) => i) || [] };
+  const out = [];
+  const walk = (nodeIdx, parentM) => {
+    const node = gltf.nodes[nodeIdx];
+    const m = mul4(parentM, nodeMatrix(node));
+    if (node.mesh != null) {
+      for (const prim of gltf.meshes[node.mesh].primitives) {
+        if (prim.mode !== undefined && prim.mode !== 4) continue; // TRIANGLES only
+        if (prim.attributes.POSITION == null) continue;
+        const pos = readAccessor(gltf, bin, prim.attributes.POSITION);
+        const idx = prim.indices != null ? readAccessor(gltf, bin, prim.indices).data : null;
+        const nIdx = idx ? idx.length : pos.count;
+        for (let k = 0; k + 2 < nIdx; k += 3)
+          for (let c = 0; c < 3; c++) {
+            const vi = idx ? idx[k + c] : k + c;
+            const p = tPoint(m, [pos.data[vi * 3], pos.data[vi * 3 + 1], pos.data[vi * 3 + 2]]);
+            out.push(p[0] * scaleToMM, p[1] * scaleToMM, p[2] * scaleToMM);
+          }
+      }
+    }
+    (node.children || []).forEach((c) => walk(c, m));
+  };
+  (scene.nodes || []).forEach((n) => walk(n, IDENT));
+  return Float64Array.from(out);
+}
+
 export function gltfToFixture(buffer, { scaleToMM = 1000, name } = {}) {
   const { gltf, bin } = parseGLB(buffer);
   const scene = gltf.scenes?.[gltf.scene ?? 0] || { nodes: gltf.nodes?.map((_, i) => i) || [] };

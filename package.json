@@ -6,7 +6,9 @@
   "license": "MIT",
   "author": "Dan Newcome",
   "engines": { "node": ">=18" },
+  "bin": { "vox": "src/cli/vox.mjs" },
   "scripts": {
+    "vox": "node src/cli/vox.mjs",
     "demo": "node examples/mobius-heart/run.mjs",
     "demo:grid": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/grid-3x3.yaml",
     "demo:facing": "node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/facing-hearts.yaml",

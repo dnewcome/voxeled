@@ -122,6 +122,11 @@ export const wave = ({ x, y, z }, t) =>
   Each point carries its fixture index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can
   group per fixture. **Confirmed rendering on TiXL 4.1.**
 - **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
+- **Any mechanical CAD (SolidWorks / Fusion / Onshape / STEP-STL)** — the **chip-island importer**:
+  export the model with its LED chips as bodies, `vox import model.stl`, and every chip becomes an
+  LED with an inferred emission normal and a recovered strand order — no plugin in anyone's CAD.
+  `vox check` validates, `vox preview` shows it. The toolchain and its "bake in the tool, one baked
+  interchange" principle are in [`docs/FORMAT.md`](docs/FORMAT.md#bringing-models-in--the-toolchain).
 - **LX Studio / Chromatik** — import a `.lxm` model into voxeled (`src/io/lxm-import.mjs`); its
   fixtures, transforms, and per-fixture output patch become a voxeled scene — and voxeled *assigns
   the emission normals LX discards* (a Chromatik cube imports with its four correct outward face

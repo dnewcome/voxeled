@@ -120,6 +120,69 @@ LED, a diffused strip, and a glowing rope are the same body with different `view
 `color × lobe(view angle) × core`, its back is dark backing, and both write depth, so the bodies
 occlude one another (a panel ribbon's quads *are* the ribbon, dark on the back).
 
+## Bringing models in — the toolchain
+
+The principle: **bake in the tool, one baked interchange.** Every modeling tool has its own idea
+of curves, surfaces and placement rules, and none of them speak each other's — so voxeled doesn't
+try to carry those across. Instead every on-ramp produces the same *baked* fixture: **points +
+emission normals + data order + strand id** (plus pitch, emitter, wiring) — the `.vxl` fixture
+above, with glTF as its visual twin. Procedural stays where it belongs: in the tool (Grasshopper),
+or in voxeled's own layouts.
+
+| where the artist is | on-ramp | normals · order |
+|---|---|---|
+| **SolidWorks / Fusion / Onshape / any STEP-STL shop** | **chip-island import** (`vox import model.stl`) — no plugin: export the model with the LED chips as bodies | chip thin axis (inferred) · chained |
+| **Blender** (also the universal hub: it imports STEP/3DM/OBJ) | export glTF (`type: gltf`) or the mesh (`type: mesh`) | glTF `NORMAL` / inferred · export order |
+| **Rhino / Grasshopper** | write `.vxl.json` points+normals from a GH definition, or export the chip mesh | as authored |
+| **LX Studio / Chromatik** | `vox import model.lxm --fixtures ~/Chromatik/Fixtures` ([interop/lxm.md](interop/lxm.md)) | assigned (LX has none) · as generated |
+| anything else | `.vxl.json` by hand (it's JSON: `pixels[].p`, `.n`, …) | as authored |
+
+```bash
+vox import model.stl --scale 1000 -o piece.vxl.json     # metres → mm; prints the report below
+vox check piece.vxl.json                                 # is it safe to hand to voxeled (and to strangers)?
+vox preview piece.vxl.json                               # → the viewer; ?sim=1 for the simulator
+```
+
+### Chip-island import (`src/io/mesh-import.mjs`)
+
+Mechanical designers already model every LED chip as a small body, for fit. Export that model as
+a mesh (STL — binary or ASCII — OBJ, or GLB) and each chip comes out as its own closed island of
+triangles. The importer:
+
+1. **clusters** the triangle soup into connected islands (shared vertices) — one island per chip
+   (Thread's SolidWorks export: 87,120 triangles → 7,260 islands of exactly 12);
+2. turns each island into an LED: **position** = centroid; **emission normal** = the chip's *thin*
+   axis (smallest principal component of its vertices) — a mesh carries no orientation, so the
+   **sign** is a policy: `--normal-sign outward` (default: away from the piece's centroid),
+   `inward`, or a fixed `+x … -z`. Verify with the viewer's **N** quills; `vox check` reminds you
+   the normals were inferred;
+3. **infers the data order** the mesh doesn't carry: `--order chain` (default) estimates the pitch,
+   then walks nearest neighbours from each strand endpoint, preferring to keep going straight, so
+   every strand comes out as an ordered run with `s` = 0→1 along it (Thread: 12 strands of ~600,
+   spacing σ = 0.04·pitch). `--order file` trusts the export order and breaks strands at jumps
+   (the thread-3d method).
+
+Knobs: `--scale <mm per unit>` (STL/OBJ carry no units; glTF is metres and handled), `--min-tris`
+/`--max-tris` (keep only chip-sized islands when the structure is in the same mesh),
+`--emitter '{"viewingAngleDeg":170,…}'` to attach an emitter profile. In a layout the same importer is
+a fixture type:
+
+```yaml
+fixtures:
+  thread:
+    type: mesh
+    params: { file: model.stl, scaleToMM: 1000, normalSign: outward, order: chain, maxTris: 40 }
+    emitter: { viewingAngleDeg: 170, sizeFrac: 0.8, softness: 0.7 }   # a diffused rope
+```
+
+### `vox check`
+
+Fails on: no pixels; **any pixel without an emission normal** (the format requires it — facing,
+visibility and the simulator all depend on it). Warns on: non-unit normals; neighbouring normals that
+flip (> 45°) along the data order; order jumps / irregular spacing (a scrambled order); duplicate
+points; missing pitch; units that look like metres; a missing emitter profile; normals that were
+inferred rather than authored.
+
 ## glTF export (`.glb`) — the map travels
 
 `node examples/mobius-heart/export.mjs [layout.yaml]` (or `make export`) writes a binary glTF 2.0

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { sampleHeart } from "./heart.mjs";
 import { gltfToFixture } from "../../src/io/gltf-import.mjs";
+import { meshToFixture } from "../../src/io/mesh-import.mjs";
 
 // How a fixture EMITS — the simulator's physics knobs (viewer sim mode; see docs/FORMAT.md).
 //   viewingAngleDeg — datasheet full angle at 50% intensity: 120 = a typical SMD LED (Lambertian),
@@ -22,4 +23,7 @@ export const FIXTURES = {
   // Import any glTF/GLB as a fixture: LED points + normals from the file (Blender, etc.).
   //   { type: gltf, params: { file: path/to.glb } }   (path resolved from the working dir)
   gltf: (params) => withEmitter(gltfToFixture(readFileSync(path.resolve(params.file)), params), BARE_LED),
+  // Mechanical CAD export (STL/OBJ/GLB) with each LED chip as its own body → chip-island import.
+  //   { type: mesh, params: { file: model.stl, scaleToMM: 1, normalSign: outward, order: chain, maxTris: 40 } }
+  mesh: (params) => withEmitter(meshToFixture(readFileSync(path.resolve(params.file)), { ...params, file: params.file }), params.emitter || BARE_LED),
 };
