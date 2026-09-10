@@ -13,7 +13,7 @@ The six protocols that show up in this world split into **two families**:
 | **sACN / E1.31** | DMX-over-IP | UDP 5568 (multicast) | universe + priority | none | mappable¹ |
 | **KiNET** | DMX-over-IP | UDP 6038 | port + channel | none | mappable¹ |
 | **OPC** | pixel stream | TCP/UDP 7890 | channel + implicit index | none (RGB888) | mappable¹ |
-| **DDP** | pixel stream | UDP 4048 | 32-bit **byte** offset | data-type byte | ✅ sender |
+| **DDP** | pixel stream | UDP 4048 | 32-bit **byte** offset | data-type byte | ✅ sender **+ receiver** |
 | **dan-mx** | pixel stream | UDP | 16-bit **pixel** start + count | colour_space + transfer | ✅ sender |
 
 ¹ *mappable* = the LX `.lxm` importer decodes its address fields, and it can be added as a sender or
@@ -42,6 +42,26 @@ via `customProtocols` — not yet a built-in sender.
   **Mark Lottor / 3waylabs** (of Cubatron LED-art fame). A 32-bit data offset lets you address into
   a large framebuffer, which is why **WLED** and **FPP/Falcon** all speak it. If you want interop,
   this is the one. voxeled implements it (`senders/ddp.mjs`).
+
+## voxeled as a DDP Display (receiver)
+
+Run the hub with **`VOX_DDP_IN=4048`** and voxeled *is* a DDP Display
+([3waylabs spec](http://www.3waylabs.com/ddp/), `src/input/ddp.mjs`): point any DDP sender at it —
+xLights, FPP/Falcon, LedFx, Chromatik, WLED-style tools, TouchDesigner — and its frames land on
+the bus (preview + simulator) **and** on the patch dispatcher, so **DDP in becomes Art-Net /
+dan-mx / DDP out per fixture**: voxeled is a protocol bridge with a map in the middle.
+
+What's implemented, per the spec: writes to ID 1 / 255 by data offset + length into a
+framebuffer (any order, partial updates kept); **PUSH** displays — also a bare broadcast PUSH;
+senders that never PUSH are displayed when their next frame starts at offset 0; data types RGB,
+RGBW (white folded in), grayscale, "as configured"; **Query/Reply** for JSON **status** (251 — how
+senders discover it: `{"status":{"man":"voxeled","mod":"hub","push":true,…}}`), JSON **config**
+(250 — `ports[0].l` = pixel count), a framebuffer read-back on ID 1, and the spec's empty Reply for
+unsupported IDs; back-to-back duplicate suppression by sequence number. Timecode is parsed and
+ignored (immediate display); storage-sourced data and DMX transit (254) are accepted but not mapped.
+
+(The web page can't do this itself — browsers have no UDP — which is exactly why the hub is the
+native DDP endpoint and the web app is its face.)
 
 ## dan-mx — the opinionated dialect
 

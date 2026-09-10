@@ -20,6 +20,7 @@ import { createArtNetSender } from "../../src/senders/artnet.mjs";
 import { createDDPSender } from "../../src/senders/ddp.mjs";
 import { createDispatcher } from "../../src/output/dispatch.mjs";
 import { createColorInput } from "../../src/input/color-tcp.mjs";
+import { createDDPInput } from "../../src/input/ddp.mjs";
 import { qrEncode, qrToAscii } from "../../src/qr.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -94,15 +95,17 @@ const hub = createHub({ scene, shade, fps: 30, bus, senders });
 // Drive mode: with VOX_LISTEN set, incoming color frames (e.g. from TiXL's VoxeledOutput) drive
 // the fixtures + preview instead of the internal show.
 const listenPort = process.env.VOX_LISTEN ? +process.env.VOX_LISTEN : 0;
-let input = null;
-if (listenPort) {
-  input = createColorInput({
-    port: listenPort,
-    onFrame: (rgb) => { bus.broadcast(rgb); for (const s of senders) s.send(rgb); },
-  });
-} else {
-  hub.start();
+// …or VOX_DDP_IN=4048: voxeled is a native DDP Display — any DDP sender (xLights, FPP, LedFx,
+// Chromatik, WLED-style tools) drives the preview/simulator AND the patch (DDP in → any protocol out).
+const ddpInPort = process.env.VOX_DDP_IN ? +process.env.VOX_DDP_IN : 0;
+const external = (rgb) => { bus.broadcast(rgb); for (const s of senders) s.send(rgb); };
+let input = null, ddpIn = null;
+if (listenPort) input = createColorInput({ port: listenPort, onFrame: external });
+if (ddpInPort) {
+  ddpIn = createDDPInput({ port: ddpInPort, pixelCount: scene.count, name: scene.name, onFrame: external });
+  ddpIn.sock.on("error", (e) => { console.error(e.code === "EADDRINUSE" ? `\n✗ udp port ${ddpInPort} is already in use (another DDP receiver?)` : `\n✗ ddp input: ${e.message}`); process.exit(1); });
 }
+if (!listenPort && !ddpInPort) hub.start();
 
 console.log(`♥ voxeled — Möbius LED Heart demo`);
 console.log(`  layout:  ${path.relative(process.cwd(), layoutPath)} — "${scene.name}"`);
@@ -113,6 +116,7 @@ const outDesc = senders.length
   : "none (set ARTNET=host / DDP=host, or add per-fixture `output` in the layout)";
 console.log(`  output:  ${outDesc}`);
 if (listenPort) console.log(`  input:   tcp ${listenPort}  (driven externally — internal show paused)`);
+if (ddpInPort) console.log(`  input:   DDP udp ${ddpInPort}  — voxeled is a DDP Display ("${scene.name}", ${scene.count.toLocaleString()} px, ID 1); point any DDP sender here (internal show paused)`);
 console.log(`  viewer:  ${bus.url}`);
 // Public interaction, LAN edition: a phone on the same Wi-Fi scans this and gets the scene
 // picker + crossfader (viewer/phone.html on the hub's /control seam). Hosted is the same seam.
@@ -124,6 +128,7 @@ if (bus.lanUrl && !process.env.VOX_NO_QR) {
 process.on("SIGINT", () => {
   hub.stop();
   input?.close();
+  ddpIn?.close();
   bus.close();
   for (const s of senders) s.close();
   console.log("\nbye");

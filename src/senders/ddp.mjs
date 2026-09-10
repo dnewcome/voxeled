@@ -29,8 +29,8 @@ export function createDDPSender({ host, port = 4048 } = {}) {
       const chunk = rgb.subarray(off, off + MAX_DATA);
       sock.send(ddpPacket(off, chunk, off + chunk.length >= rgb.length, seq), port, host);
       off += chunk.length;
+      seq = (seq % 15) + 1; // spec: the sequence number increments with EACH packet (1–15)
     }
-    seq = (seq % 15) + 1;
   }
   return { send, close: () => sock.close(), kind: "ddp", target: `${host}:${port}` };
 }
