@@ -86,6 +86,40 @@ written once in voxeled, so every consumer (including the TiXL bridge) gets it f
 Mixed-protocol demo (Art-Net + dan-mx + DDP from one show):
 `node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/patched.yaml`.
 
+## Emitter — how the LEDs emit (simulation)
+
+The map says where each LED is and which way it faces; the **emitter profile** says how it *emits*,
+so the viewer's simulator (**S**) can show what the piece actually looks like — viewing-angle
+falloff, the dark backside of every LED, occlusion by the bodies themselves, and diffusion glow.
+It rides alongside `output` with the same precedence: fixture-type default (built into the
+geometry, e.g. the heart's panel LED) < layout `fixtures.X.emitter` < per-instance `emitter`,
+merged field-by-field, and lands in `meta.instances[k].emitter`.
+
+```yaml
+fixtures:
+  heart:
+    type: mobius-heart
+    emitter: { softness: 0.6 }                                   # tweak the type default
+instances:
+  - { fixture: heart, name: left,  pos: [...] }
+  - { fixture: heart, name: right, pos: [...], emitter: { viewingAngleDeg: 20 } }  # a spot variant
+```
+
+| field | default | meaning |
+|---|---|---|
+| `viewingAngleDeg` | 120 | datasheet **full** angle at 50% intensity. The lobe is `cosθ^p`, `p = ln½ / ln cos(angle/2)` — so **120° is exactly Lambertian**, ~10° a spot, ~1° laser-like, ~170° a diffused rope/tube. Behind the LED (θ > 90°) it is dark. |
+| `sizeFrac` | 0.9 | emitter *body* edge as a fraction of pixel pitch (1.0 = contiguous panel tiles that form a surface; ~0.5 = a bare chip on a strand) |
+| `coreFrac` | 0.5 | lit fraction of the body (the chip/lens); the rest is dark backing |
+| `softness` | 0.4 | edge diffusion of the lit core (0 = hard chip, 1 = soft blob) |
+| `gain` | 1.6 | emissive intensity (HDR; > 1 feeds bloom) |
+| `glow` | 1.0 | bloom contribution (the diffusion halo) |
+
+One shader covers the whole range because only the numbers change: a laser, a spot, a bare SMD
+LED, a diffused strip, and a glowing rope are the same body with different `viewingAngleDeg` /
+`softness` / `sizeFrac`. Each body is opaque and faces its normal — its front emits
+`color × lobe(view angle) × core`, its back is dark backing, and both write depth, so the bodies
+occlude one another (a panel ribbon's quads *are* the ribbon, dark on the back).
+
 ## glTF export (`.glb`) — the map travels
 
 `node examples/mobius-heart/export.mjs [layout.yaml]` (or `make export`) writes a binary glTF 2.0

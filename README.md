@@ -92,7 +92,7 @@ mesh = "arches.glb#LeftArch"          # reuse imported geometry, don't redraw it
   byte_order = "grb"
 ```
 
-Each pixel resolves to, at minimum, **`position + normal + address`**. The normal is a first-class field — carried through glTF as the standard `NORMAL` attribute / USD `normals` primvar so it survives round-trips. Because voxeled keeps position **and** orientation, it can go a step further than a point cloud and reason about **visibility** — projecting the map through a virtual camera to ask *which LEDs are actually seen from a vantage* (self-occlusion, silhouette, back-faces). Occlusion, projection-mapping, and camera automapping are one primitive; see [`docs/visibility.md`](docs/visibility.md) (`VOX_PATTERN=spotlight`).
+Each pixel resolves to, at minimum, **`position + normal + address`**. The normal is a first-class field — carried through glTF as the standard `NORMAL` attribute / USD `normals` primvar so it survives round-trips. Because voxeled keeps position **and** orientation, it can go a step further than a point cloud and reason about **visibility** — projecting the map through a virtual camera to ask *which LEDs are actually seen from a vantage* (self-occlusion, silhouette, back-faces). Occlusion, projection-mapping, and camera automapping are one primitive; see [`docs/visibility.md`](docs/visibility.md) (`VOX_PATTERN=spotlight`). And the viewer's **simulator** (**S**) turns that into *appearance*: each LED is rendered as an oriented emissive body — a viewing-angle lobe derived from the datasheet angle (120° ⇒ Lambertian; laser to diffused rope from one shader), a dark backside, self-occlusion, bloom for diffusion — so you see what the piece actually looks like from a vantage, not just where its pixels are. Emitter profiles are data on the fixture ([`docs/FORMAT.md`](docs/FORMAT.md#emitter--how-the-leds-emit-simulation)).
 
 The format is documented in [`docs/FORMAT.md`](docs/FORMAT.md), and any scene **exports to glTF today** (`make export`): the map opens as named point-cloud objects, at real-world scale with normals + a baked look, in Blender / TouchDesigner / three.js — verified by loading it back through a standard glTF loader.
 
@@ -143,6 +143,7 @@ export const wave = ({ x, y, z }, t) =>
 | Imports glTF / GDTF / MVR | planned | ❌ | ❌ | ❌ (own `.lxf`) |
 | Camera automapping | planned, built-in | 3rd-party workflow | ❌ | ❌ |
 | Visibility / occlusion-aware | ✅ virtual camera | ❌ | ❌ | ❌ (point cloud) |
+| Appearance sim (view angle · backside · occlusion · diffusion) | ✅ emitter profiles | ❌ | partial (3D voxels) | ❌ (flat points) |
 
 *(Comparison is about fit for this niche, not overall quality — these are all good tools.)*
 

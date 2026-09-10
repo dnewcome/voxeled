@@ -31,6 +31,7 @@
     border-radius:8px; padding:5px 8px; }
   #xf button.on { background:#ff5e87; border-color:#ff5e87; color:#1a0410; font-weight:700; }
   #help { position: fixed; bottom: 10px; left: 12px; z-index: 10; color: #56688a; font-size: 11px; }
+  #h-mode.sim { color: #ffcf4d; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -44,6 +45,7 @@
   <div class="row"><span>Scene</span><span id="h-name">—</span></div>
   <div class="row"><span>Instances</span><span id="h-inst">—</span></div>
   <div class="row"><span>Pixels</span><span id="h-count">—</span></div>
+  <div class="row"><span>Mode</span><span id="h-mode">dots</span></div>
   <div class="row"><span>Bus</span><span id="h-bus"><span class="dot" id="h-dot"></span>waiting…</span></div>
   <div class="row"><span>Frames/s</span><span id="h-fps">—</span></div>
   <hr/>
@@ -53,17 +55,22 @@
     <button id="xf-auto" class="on">⟳ Auto-crossfade</button>
   </div>
 </div>
-<div id="help">drag orbit · scroll zoom · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
+<div id="help">drag orbit · scroll zoom · <b>S</b> sim · <b>B</b> bloom · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
 
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
+import { EffectComposer } from "./vendor/postprocessing/EffectComposer.js";
+import { RenderPass } from "./vendor/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "./vendor/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "./vendor/postprocessing/OutputPass.js";
 
 const $ = (id) => document.getElementById(id);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // sim mode is HDR-ish (emissive > 1) + bloom
 document.body.appendChild(renderer.domElement);
 
 const scene3 = new THREE.Scene();
@@ -73,16 +80,80 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
+let composer = null, bloomPass = null;
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  composer?.setSize(innerWidth, innerHeight);
 });
 
-let mesh = null, normalsLines = null, N = 0;
+let mesh = null, simMesh = null, normalsLines = null, N = 0;
+// ?sim=1 boots straight into the simulator (also how the headless render gate exercises it).
+let simOn = new URLSearchParams(location.search).get("sim") === "1";
+let bloomOn = true;
 // Dim idle colour so the heart's shape is faintly visible even before any frame arrives —
 // lets you tell "geometry didn't load" apart from "no frames on the bus".
 const OFF = new THREE.Color(0x1a2138);
+// Sim idle: every emitter ON at a neutral level, so the physics (lobe, dark backside, occlusion,
+// bloom) reads on a fresh load / headless screenshot before any show frames arrive.
+const SIM_IDLE = new THREE.Color(0.55, 0.52, 0.48);
+
+// ── the simulator: each LED as an oriented, opaque emissive body ─────────────────
+// One shader covers laser → spot → bare LED → diffused strip → rope, driven by the fixture's
+// emitter profile (scene.meta.instances[k].emitter):
+//   viewingAngleDeg  datasheet full angle at 50% intensity → lobe exponent p = ln½ / ln cos(θ/2)
+//                    (120° ⇒ p = 1, exactly Lambertian; 10° ⇒ ~100, a spot; 170° ⇒ ~0.28, a rope)
+//   sizeFrac         emitter body edge as a fraction of pixel pitch (1.0 = contiguous panel tiles)
+//   coreFrac         lit fraction of the body (the chip/lens);  softness  edge diffusion of that core
+//   gain / glow      emissive intensity / bloom contribution
+// The body is a quad facing the emission normal. Its FRONT emits color × lobe(view angle) × core
+// shape; its BACK is dark backing (the "backside shadow") — and both write depth, so the bodies
+// occlude each other. For a panel ribbon the quads literally are the ribbon, dark on the back.
+const EMIT_DEFAULT = { viewingAngleDeg: 120, sizeFrac: 0.9, coreFrac: 0.5, softness: 0.4, gain: 1.6, glow: 1.0 };
+const lobeP = (deg) => {
+  const c = Math.cos((Math.min(179.5, Math.max(0.5, deg)) * Math.PI) / 360);
+  return Math.log(0.5) / Math.log(Math.max(1e-9, c));
+};
+
+const SIM_VERT = /* glsl */`
+  attribute vec4 aEmit;                  // lobeP, coreFrac, softness, gain (per instance)
+  varying vec3 vWorldPos, vWorldN, vColor;
+  varying vec2 vUv;
+  varying vec4 vEmit;
+  void main() {
+    vUv = uv; vEmit = aEmit;
+    #ifdef USE_INSTANCING_COLOR
+      vColor = instanceColor;
+    #else
+      vColor = vec3(1.0);
+    #endif
+    mat4 im = modelMatrix * instanceMatrix;
+    vec4 wp = im * vec4(position, 1.0);
+    vWorldPos = wp.xyz;
+    vWorldN = normalize(mat3(im) * vec3(0.0, 0.0, 1.0));   // the quad's +Z is the emission normal
+    gl_Position = projectionMatrix * viewMatrix * wp;
+  }`;
+const SIM_FRAG = /* glsl */`
+  precision highp float;
+  varying vec3 vWorldPos, vWorldN, vColor;
+  varying vec2 vUv;
+  varying vec4 vEmit;
+  uniform vec3 uBacking;
+  uniform float uExposure;
+  void main() {
+    vec3 V = normalize(cameraPosition - vWorldPos);
+    float cosT = dot(vWorldN, V);
+    // Backside of the emitter: the dark shadow (panel backing / chip substrate). Still opaque.
+    if (cosT <= 0.0) { gl_FragColor = vec4(uBacking, 1.0); return; }
+    float lobe = pow(cosT, vEmit.x);                 // viewing-angle response
+    // the lit core (chip/lens) within the body, edge-diffused; the rest of the body is backing
+    float d = length(vUv - 0.5) * 2.0;               // 0 at centre .. 1 at the inscribed body edge
+    float core = vEmit.y, soft = max(vEmit.z, 0.02);
+    float shape = 1.0 - smoothstep(core * (1.0 - soft), core * (1.0 + soft), d);
+    vec3 lit = vColor * lobe * shape * vEmit.w * uExposure;
+    gl_FragColor = vec4(uBacking + lit, 1.0);
+  }`;
 
 async function boot() {
   const scene = await (await fetch("scene.json")).json();
@@ -107,6 +178,7 @@ async function boot() {
   const pitch = scene.meta?.pitchMM;
   const ledSize = pitch ? pitch * 0.5 : diag / 400;
 
+  // ── dots mode: plain boxes (the map) ──
   const geo = new THREE.BoxGeometry(ledSize, ledSize, ledSize);
   const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
   mesh = new THREE.InstancedMesh(geo, mat, N);
@@ -120,6 +192,48 @@ async function boot() {
   mesh.instanceMatrix.needsUpdate = true;
   mesh.instanceColor.needsUpdate = true;
   scene3.add(mesh);
+
+  // ── sim mode: oriented emissive bodies with a per-fixture emitter profile ──
+  const emitters = (scene.meta?.instances || []).map((it) => ({ ...EMIT_DEFAULT, ...(it.emitter || {}) }));
+  const emitOf = (i) => emitters[px[i].inst || 0] || EMIT_DEFAULT;
+  const bodyBase = pitch ? pitch : (diag / 400) * 2;
+  const simGeo = new THREE.PlaneGeometry(1, 1);
+  const aEmit = new Float32Array(N * 4);
+  const simMat = new THREE.ShaderMaterial({
+    vertexShader: SIM_VERT, fragmentShader: SIM_FRAG,
+    uniforms: { uBacking: { value: new THREE.Color(0x0a0c14) }, uExposure: { value: 1.0 } },
+    side: THREE.DoubleSide,
+  });
+  simMesh = new THREE.InstancedMesh(simGeo, simMat, N);
+  const q = new THREE.Quaternion(), zAxis = new THREE.Vector3(0, 0, 1), nv = new THREE.Vector3();
+  const body = new THREE.Object3D();
+  let maxGlow = 0;
+  for (let i = 0; i < N; i++) {
+    const e = emitOf(i), p = px[i].p, n = px[i].n;
+    nv.set(n[0], n[1], n[2]).normalize();
+    q.setFromUnitVectors(zAxis, nv);                   // local +Z → the emission normal
+    const s = bodyBase * e.sizeFrac;
+    body.position.set(p[0], p[1], p[2]); body.quaternion.copy(q); body.scale.set(s, s, 1);
+    body.updateMatrix();
+    simMesh.setMatrixAt(i, body.matrix);
+    simMesh.setColorAt(i, SIM_IDLE);
+    aEmit.set([lobeP(e.viewingAngleDeg), e.coreFrac, e.softness, e.gain], i * 4);
+    maxGlow = Math.max(maxGlow, e.glow);
+  }
+  simGeo.setAttribute("aEmit", new THREE.InstancedBufferAttribute(aEmit, 4));
+  simMesh.instanceMatrix.needsUpdate = true;
+  simMesh.instanceColor.needsUpdate = true;
+  simMesh.frustumCulled = false;
+  scene3.add(simMesh);
+
+  // bloom = the diffusion glow; strength tracks the strongest emitter's `glow`
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene3, camera));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.9 * (maxGlow || 1), 0.45, 0.35);
+  bloomPass.enabled = bloomOn;
+  composer.addPass(bloomPass);
+  composer.addPass(new OutputPass());
+  applyMode();
 
   // Normal quills (toggle with N) — the visual proof the emission directions are right.
   const nGeo = new THREE.BufferGeometry();
@@ -141,14 +255,41 @@ async function boot() {
   ground.position.set(center.x, lo[1], center.z);
   scene3.add(ground);
 
-  // Elevated 3/4 camera so the ground plane and depth read (works for walls too).
+  // Default vantage: look from where the light GOES. Stand along the mean emission direction — the
+  // audience side of the lit faces (for a Möbius ribbon, its dominant side) — elevated 3/4 so the
+  // ground plane and depth read. Falls back to +Z for omni/balanced rigs. (The simulator made this
+  // matter: the old fixed +Z camera was looking at the heart's dark backside.)
+  const nbar = [0, 0, 0];
+  for (const p of px) { nbar[0] += p.n[0]; nbar[1] += p.n[1]; nbar[2] += p.n[2]; }
+  const horiz = Math.hypot(nbar[0], nbar[2]) > 0.05 * N ? [nbar[0], nbar[2]] : [0, 1]; // horizontal component, off the poles
+  const hl = Math.hypot(horiz[0], horiz[1]);
   camera.up.set(0, 1, 0);
-  camera.position.set(center.x + diag * 0.1, center.y + diag * 0.4, center.z + diag * 1.15);
+  camera.position.set(center.x + (horiz[0] / hl) * diag * 1.15, center.y + diag * 0.4, center.z + (horiz[1] / hl) * diag * 1.15);
   controls.target.copy(center);
   controls.update();
 
+  // Reproducible vantages for screenshots / the render gate: ?az=<deg>&el=<deg> orbits the camera
+  // around the scene centre (az 0 = in front, 90 = from +X); ?normals=1 shows the quills.
+  const qs = new URLSearchParams(location.search);
+  if (qs.has("az") || qs.has("el")) {
+    const az = ((+qs.get("az") || 0) * Math.PI) / 180, el = ((+(qs.get("el") ?? 15)) * Math.PI) / 180, r = diag * 1.2;
+    camera.position.set(center.x + r * Math.cos(el) * Math.sin(az), center.y + r * Math.sin(el), center.z + r * Math.cos(el) * Math.cos(az));
+    controls.update();
+  }
+  if (qs.get("normals") === "1") normalsLines.visible = true;
+
   connectBus();
   console.log("VOXELED_READY", N); // headless render gate looks for this
+  console.log("VOXELED_SIM_READY", emitters.length, "emitter profile(s)"); // …and for the simulator
+}
+
+function applyMode() {
+  if (mesh) mesh.visible = !simOn;
+  if (simMesh) simMesh.visible = simOn;
+  const el = $("h-mode");
+  el.textContent = simOn ? (bloomOn ? "sim + bloom" : "sim") : "dots";
+  el.classList.toggle("sim", simOn);
+  if (bloomPass) bloomPass.enabled = bloomOn;
 }
 
 // ── the normalized pixel bus ──────────────────────────────────────────────────
@@ -167,8 +308,10 @@ function connectBus() {
     for (let i = 0; i < n; i++) {
       tmp.setRGB(d[i*3]/255, d[i*3+1]/255, d[i*3+2]/255);
       mesh.setColorAt(i, tmp);
+      simMesh?.setColorAt(i, tmp);
     }
     mesh.instanceColor.needsUpdate = true;
+    if (simMesh) simMesh.instanceColor.needsUpdate = true;
     frameCount++;
   };
 }
@@ -196,6 +339,8 @@ autoBtn.addEventListener("click", () => {
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (k === "n" && normalsLines) normalsLines.visible = !normalsLines.visible;
+  else if (k === "s") { simOn = !simOn; applyMode(); }
+  else if (k === "b") { bloomOn = !bloomOn; applyMode(); }
   else if (k === "[") { slider.value = Math.max(0, +slider.value - 0.05); goManual(); }
   else if (k === "]") { slider.value = Math.min(1, +slider.value + 0.05); goManual(); }
   else if (k === "a") autoBtn.click();
@@ -209,7 +354,7 @@ function loop() {
     $("h-fps").textContent = Math.round((frameCount * 1000) / (now - lastFpsT));
     frameCount = 0; lastFpsT = now;
   }
-  renderer.render(scene3, camera);
+  if (simOn && composer) composer.render(); else renderer.render(scene3, camera);
 }
 loop();
 boot().catch((e) => { $("h-name").textContent = "load error"; console.error("VOXELED_ERROR", e); });

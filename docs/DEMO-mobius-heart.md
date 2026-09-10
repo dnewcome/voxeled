@@ -26,9 +26,31 @@ By default it loads [`layouts/two-hearts.yaml`](../examples/mobius-heart/layouts
 — a **rig of two hearts, 10 ft apart** — and runs its **auto-crossfading show**. In the viewer:
 
 - **drag** orbit · **scroll** zoom
+- **S** — the **simulator**: what the piece actually *looks like* (see below); **B** toggles its bloom
 - **N** — toggle the normal quills
 - the **crossfader** (bottom-left) — dissolve between the first two scenes by hand; **[** / **]**
   nudge it, **A** returns to auto
+- URL params: `?sim=1` boots into the simulator; `?az=<deg>&el=<deg>` sets a reproducible vantage
+  (az 0 = in front, 90 = from +X); `?normals=1` shows the quills
+
+## The simulator (S)
+
+The dots view is the **map** — every pixel drawn the same regardless of where it points. The
+simulator is the **appearance**: each LED becomes an oriented, opaque emissive body facing its
+normal. Its front emits `colour × lobe(view angle) × core shape`; its back is dark backing (the
+shadow behind every LED); both write depth, so the bodies occlude each other — for the heart the
+bodies literally form the ribbon, dark on the back. Bloom supplies the diffusion glow. The physics
+knobs come from the fixture's **emitter profile** (`viewingAngleDeg`, `sizeFrac`, `coreFrac`,
+`softness`, `gain`, `glow` — [`FORMAT.md`](FORMAT.md#emitter--how-the-leds-emit-simulation)); the
+lobe exponent is derived from the datasheet viewing angle, so a 120° SMD LED is exactly Lambertian,
+a 10° emitter a spot, a 170° one a diffused rope — one shader from laser to rope.
+
+The first thing it revealed: from the old fixed front camera only **7 % of the heart's LEDs face
+you** — the ribbon's lit faces point the other way, so the front view is mostly the dark backside,
+and the twist is where a face turns toward you. The viewer now defaults to the vantage **where the
+light goes** (along the mean emission direction). Orbit around and watch faces light and darken as
+their lobes sweep past the camera — that is the piece as an audience will see it, not as the map
+draws it.
 
 The rig, fixture params, and scene list all live in the **layout file** (see below) — edit the
 YAML, not env vars. What remains as env:

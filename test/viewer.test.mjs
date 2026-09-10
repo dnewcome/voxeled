@@ -51,13 +51,15 @@ const r = spawnSync(chrome, [
   "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
   "--window-size=1280,800", "--virtual-time-budget=8000",
   "--enable-logging=stderr", "--v=1", `--screenshot=${shot}`,
-  `http://localhost:${port}/`,
+  `http://localhost:${port}/?sim=1`, // boot into the simulator so its shader + bloom composer actually render
 ], { encoding: "utf8", timeout: 40000 });
 
 const out = (r.stdout || "") + (r.stderr || "");
 ok(out.includes("VOXELED_READY"), "viewer built its geometry (VOXELED_READY fired)");
+ok(out.includes("VOXELED_SIM_READY"), "simulator built (oriented emitter bodies + bloom composer)");
 ok(!out.includes("VOXELED_ERROR"), "viewer boot threw no error");
 ok(!/Failed to resolve module|net::ERR|Uncaught (Syntax|Reference|Type)Error/.test(out), "no module-resolution / load errors");
+ok(!/Shader Error|WebGLProgram: Shader|THREE\.WebGLShader/.test(out), "sim shader compiled without GLSL errors");
 ok(existsSync(shot), `screenshot saved → ${path.relative(ROOT, shot)}`);
 
 console.log(`viewer: ${pass} passed, ${fail} failed`);

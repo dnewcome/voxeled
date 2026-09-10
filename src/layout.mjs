@@ -46,6 +46,7 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
         pos: inst.pos || [0, 0, 0],
         rotDeg: inst.rotDeg || [0, 0, 0],
         ...(inst.output ? { output: inst.output } : {}),
+        ...(inst.emitter ? { emitter: inst.emitter } : {}), // how this instance's LEDs emit (sim)
       })),
     },
   });
@@ -77,13 +78,19 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {} } = {}) {
     const def = fixDefs[inst.fixture] || {};
     // The output patch merges the fixture-level default with per-instance overrides.
     const output = def.output || inst.output ? { ...(def.output || {}), ...(inst.output || {}) } : undefined;
+    const fixture = getFixture(inst.fixture);
+    // Emitter profile: fixture-type default (built into the geometry) < layout `fixtures.X.emitter`
+    // < per-instance `emitter` override.
+    const emitterSrc = [fixture.meta?.emitter, def.emitter, inst.emitter].filter(Boolean);
+    const emitter = emitterSrc.length ? Object.assign({}, ...emitterSrc) : undefined;
     return {
       name: inst.name || `${inst.fixture}-${k + 1}`,
       fixtureName: inst.fixture,
-      fixture: getFixture(inst.fixture),
+      fixture,
       pos: inst.pos,
       rotDeg: inst.rotDeg,
       output,
+      emitter,
     };
   });
   if (!instances.length) throw new Error("layout has no instances");
