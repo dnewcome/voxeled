@@ -33,6 +33,17 @@ By default it loads [`layouts/two-hearts.yaml`](../examples/mobius-heart/layouts
 - URL params: `?sim=1` boots into the simulator; `?az=<deg>&el=<deg>` sets a reproducible vantage
   (az 0 = in front, 90 = from +X); `?normals=1` shows the quills
 
+## Control it from a phone (QR)
+
+When the demo starts it prints a **QR code** and the LAN address of `phone.html` — scan it with any
+phone on the same Wi-Fi and you get a mobile page with the show's **scenes** (tap one and it fades
+in over ~1 s), the **crossfader**, and the **auto** toggle. It's a thin client of the hub's `/control`
+seam — the same one the viewer's crossfader uses — polling every 1.5 s so several phones (and
+auto mode) stay in sync, and the hub keeps running the show if the phone walks away. This is the
+first slice of the roadmap's *hosted & public* phase: hosted is the same seam behind a public URL.
+`VOX_NO_QR=1` hides the code; the QR encoder is dependency-free (`src/qr.mjs`, verified by
+decoding with OpenCV in the tests).
+
 ## The simulator (S)
 
 The dots view is the **map** — every pixel drawn the same regardless of where it points. The

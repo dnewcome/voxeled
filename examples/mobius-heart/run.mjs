@@ -20,6 +20,7 @@ import { createArtNetSender } from "../../src/senders/artnet.mjs";
 import { createDDPSender } from "../../src/senders/ddp.mjs";
 import { createDispatcher } from "../../src/output/dispatch.mjs";
 import { createColorInput } from "../../src/input/color-tcp.mjs";
+import { qrEncode, qrToAscii } from "../../src/qr.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
@@ -113,6 +114,12 @@ const outDesc = senders.length
 console.log(`  output:  ${outDesc}`);
 if (listenPort) console.log(`  input:   tcp ${listenPort}  (driven externally — internal show paused)`);
 console.log(`  viewer:  ${bus.url}`);
+// Public interaction, LAN edition: a phone on the same Wi-Fi scans this and gets the scene
+// picker + crossfader (viewer/phone.html on the hub's /control seam). Hosted is the same seam.
+if (bus.lanUrl && !process.env.VOX_NO_QR) {
+  console.log(`  phone:   ${bus.lanUrl}phone.html   (scan to control the piece)`);
+  console.log(qrToAscii(qrEncode(`${bus.lanUrl}phone.html`)).replace(/^/gm, "     "));
+}
 
 process.on("SIGINT", () => {
   hub.stop();

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#05060a" />
+<title>voxeled — control</title>
+<style>
+  :root { color-scheme: dark; --pink:#ff5e87; --ink:#eef3ff; --dim:#8da0c2; --panel:rgba(120,150,210,0.12); --line:rgba(120,150,210,0.28); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; min-height:100%; background:#05060a; color:var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 13px; letter-spacing:.5px; text-transform:uppercase; color:var(--pink); margin: 4px 0 2px; font-weight:700; }
+  #name { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  #status { color: var(--dim); font-size: 13px; margin-bottom: 18px; min-height: 18px; }
+  #status .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffcf4d; margin-right:6px; vertical-align:middle; }
+  #status .dot.live { background:#69e08f; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--dim); margin: 16px 0 8px; }
+  #scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #scenes button { min-height: 64px; font-size: 16px; font-weight: 600; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 14px; padding: 12px; text-align: left; cursor: pointer; line-height: 1.25; }
+  #scenes button.live { background: var(--pink); border-color: var(--pink); color: #1a0410; }
+  #scenes button.next { border-color: var(--pink); box-shadow: inset 0 0 0 1px var(--pink); }
+  #scenes button:active { transform: scale(0.98); }
+  #xf { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  #xf .ab { display:flex; justify-content:space-between; font-size:13px; margin-bottom: 8px; }
+  #xf .ab b { color: var(--ink); }
+  #xf input[type=range] { width: 100%; height: 44px; accent-color: var(--pink); margin: 0; }
+  #auto { width: 100%; min-height: 52px; margin-top: 12px; font-size: 15px; font-weight: 700; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
+  #auto.on { background: var(--pink); border-color: var(--pink); color: #1a0410; }
+  #empty { color: var(--dim); font-size: 14px; padding: 14px; border: 1px dashed var(--line); border-radius: 14px; }
+  footer { color:#56688a; font-size: 11px; margin-top: 22px; text-align:center; }
+  footer a { color: #8fd0ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<h1>♥ voxeled</h1>
+<div id="name">—</div>
+<div id="status"><span class="dot" id="dot"></span><span id="stext">connecting…</span></div>
+
+<div class="label">Scenes — tap to fade in</div>
+<div id="scenes"></div>
+<div id="empty" hidden>This piece is running a single pattern right now — nothing to switch between.</div>
+
+<div class="label">Crossfader</div>
+<div id="xf">
+  <div class="ab"><span>◂ <b id="a">A</b></span><span><b id="b">B</b> ▸</span></div>
+  <input id="fader" type="range" min="0" max="1" step="0.005" value="0" />
+  <button id="auto" class="on">⟳ Auto-crossfade</button>
+</div>
+<footer>the hub keeps running the show if you close this · <a href="/">3D view</a></footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let scenes = [], state = { mode: "auto", a: 0, b: 1, fader: 0 };
+let lastSend = 0, pending = null, ramp = null;
+
+async function send(qs) {
+  // coalesce to ≤ 1 request / 60 ms so a slider drag doesn't flood the hub
+  const now = performance.now();
+  if (now - lastSend < 60) { clearTimeout(pending); pending = setTimeout(() => send(qs), 60); return; }
+  lastSend = now;
+  try { state = await (await fetch("/control?" + qs)).json(); render(); } catch {}
+}
+
+// Tap a scene: make it deck B and ramp the fader 0→1 over ~1.2 s, then settle it as deck A.
+function fadeTo(k) {
+  if (ramp) clearInterval(ramp);
+  const from = state.mode === "manual" ? state.a : state.a; // current live deck
+  const a = (state.mode === "manual" && state.fader > 0.5) ? state.b : from;
+  if (a === k) { send(`mode=manual&a=${k}&b=${k}&fader=0`); return; }
+  let x = 0;
+  send(`mode=manual&a=${a}&b=${k}&fader=0`);
+  ramp = setInterval(() => {
+    x = Math.min(1, x + 0.05);
+    if (x >= 1) { clearInterval(ramp); ramp = null; send(`mode=manual&a=${k}&b=${k}&fader=0`); return; }
+    send(`mode=manual&a=${a}&b=${k}&fader=${x.toFixed(3)}`);
+  }, 60);
+}
+
+function render() {
+  const manual = state.mode === "manual";
+  $("auto").classList.toggle("on", !manual);
+  const live = manual ? (state.fader > 0.5 ? state.b : state.a) : null;
+  for (const [k, btn] of [...$("scenes").children].entries()) {
+    btn.classList.toggle("live", live === k);
+    btn.classList.toggle("next", manual && state.b === k && state.a !== k && state.fader <= 0.5);
+  }
+  if (document.activeElement !== $("fader")) $("fader").value = manual ? state.fader : 0;
+  $("a").textContent = scenes[state.a] ?? "A";
+  $("b").textContent = scenes[state.b] ?? "B";
+}
+
+$("fader").addEventListener("input", () => { if (ramp) { clearInterval(ramp); ramp = null; } send(`mode=manual&a=${state.a}&b=${state.b}&fader=${$("fader").value}`); });
+$("auto").addEventListener("click", () => send($("auto").classList.contains("on") ? `mode=manual&a=${state.a}&b=${state.b}&fader=${state.fader}` : "mode=auto"));
+
+async function boot() {
+  try {
+    const scene = await (await fetch("scene.json")).json();
+    $("name").textContent = scene.name;
+    scenes = scene.meta?.show?.scenes || [];
+    const single = scene.meta?.show?.single || scenes.length < 2;
+    $("empty").hidden = !single;
+    if (!single) for (const [k, name] of scenes.entries()) {
+      const b = document.createElement("button"); b.textContent = name; b.addEventListener("click", () => fadeTo(k)); $("scenes").appendChild(b);
+    } else $("xf").style.opacity = 0.4;
+    $("dot").classList.add("live"); $("stext").textContent = `${scene.count.toLocaleString()} pixels · ${scene.meta?.instances?.length ?? 1} fixture(s)`;
+    await send("");                   // read current state without changing it
+    setInterval(() => { if (!ramp) send(""); }, 1500); // follow what others (or auto) are doing
+  } catch (e) { $("stext").textContent = "can't reach the hub"; }
+}
+boot();
+</script>
+</body>
+</html>

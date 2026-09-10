@@ -6,6 +6,7 @@
 //
 // Minimal RFC-6455 server: HTTP upgrade + unmasked binary broadcast frames. No external deps.
 import http from "node:http";
+import os from "node:os";
 import crypto from "node:crypto";
 import path from "node:path";
 import { readFileSync, existsSync, statSync } from "node:fs";
@@ -110,11 +111,14 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir
     for (const s of clients) { if (s.writable) s.write(frame); }
   }
 
+  // The LAN address — what a phone on the same Wi-Fi can reach (first non-internal IPv4).
+  const lanIp = Object.values(os.networkInterfaces()).flat().find((i) => i && i.family === "IPv4" && !i.internal)?.address;
   return {
     broadcast,
     clients,
     server,
     url: `http://localhost:${port}/`,
+    lanUrl: lanIp ? `http://${lanIp}:${port}/` : null,
     close: () => { for (const s of clients) s.destroy(); server.close(); },
   };
 }
