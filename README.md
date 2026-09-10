@@ -162,9 +162,13 @@ Two differentiators the incumbents leave open:
 ## Roadmap
 
 - **Phase 0 — the spine** *(now)*: minimal scene format → hub loads it → one spatial pattern → normalized bus → WebGL preview + DDP/Art-Net sender, on one strip. Preview and reality visibly match.
-- **Phase 1 — bring your geometry**: glTF/USD import; a Blender plugin that bakes per-instance **positions + normals** via Geometry Nodes; then GDTF/MVR import.
-- **Phase 2 — automap**: Gray-code structured-light camera mapper, multi-view triangulation, export to native + glTF.
-- **Phase 3 — live**: dynamic scenes (live re-localization / MVR-xchange), DAW-style channels + modulators (LFOs / envelopes / audio), scenes & crossfades.
+- **Phase 1 — bring your geometry**: glTF import ✅, the chip-island mesh importer for any mechanical CAD ✅, LX/Chromatik `.lxm` import ✅; still ahead: a Blender addon that bakes **positions + normals** via Geometry Nodes, a Grasshopper component, fixture packages + a data-driven registry, then GDTF/MVR.
+- **Phase 2 — automap**: Gray-code structured-light camera mapper, multi-view triangulation, export to native + glTF. (The virtual-camera visibility primitive is this math already — automapping is it run in reverse.)
+- **Phase 3 — live**: scenes & crossfades ✅, the appearance simulator ✅; still ahead: dynamic scenes (live re-localization / MVR-xchange), DAW-style channels + modulators (LFOs / envelopes / audio), the live-frame VJ jack-in (NDI).
+- **Phase 4 — hosted & public**: the same hub behind a URL, so a piece has an *address*. Two things that address unlocks:
+  - **Public interaction** — a QR code on the sculpture opens a phone page (no app) that jacks into the hub's control seam: pick or trigger scenes, nudge the crossfader, send a colour, or make *your tap a wave that starts from where you're standing* — the map knows where that is. Per-piece, rate-limited, moderated. (We've done QR-driven interaction on past pieces; this makes it a built-in rather than a one-off.)
+  - **Collaborative pattern design** — patterns are already pure `f(pixel, t, ctx)` and the viewer + simulator already run in the browser, so collaborators write and preview a pattern *against the piece's real map, in the simulator, in a browser tab* — no install — then submit it as a scene to the show. Sandboxed (a Worker), versioned, previewable before it ever touches an LED.
+  - The LEDs never depend on the internet: the local hub keeps driving the piece and falls back to its own show if the link drops; the hosted side is control-plane + preview + the piece's public face.
 
 See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design notes and the reasoning behind these decisions.
 
