@@ -121,7 +121,13 @@ export const wave = ({ x, y, z }, t) =>
   colored points back to voxeled (`VoxeledOutput` → `VOX_LISTEN`) for the full mixed-protocol patch.
   Each point carries its fixture index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can
   group per fixture. **Confirmed rendering on TiXL 4.1.**
-- **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
+- **Blender** ([`integrations/blender/`](integrations/blender/)) — an addon that bakes LEDs *with
+  emission normals*: mesh vertices / faces (panels) / islands (modelled chips), curves as ropes on
+  tubes, empties as aimed LEDs → `.vxl.json`, which any layout places with `type: vxl`. Tested
+  headless against Blender 5.2. (glTF export *and* import work too.)
+- **Rhino / Grasshopper** ([`integrations/grasshopper/`](integrations/grasshopper/)) — a Python
+  script component: points + normals + strand from your definition → `.vxl.json`.
+- **TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
 - **Builder mode** (`E` in the viewer) — author the installation *in* voxeled: click-select,
   gizmo move/rotate, duplicate/delete/add, turn an entry into a **matrix**, save — editing the same
   git-diffable layout YAML the hub runs (`GET/POST /layout`, live, file-watched). Rings and arrays

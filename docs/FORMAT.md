@@ -216,8 +216,8 @@ or in voxeled's own layouts.
 | where the artist is | on-ramp | normals · order |
 |---|---|---|
 | **SolidWorks / Fusion / Onshape / any STEP-STL shop** | **chip-island import** (`vox import model.stl`) — no plugin: export the model with the LED chips as bodies | chip thin axis (inferred) · chained |
-| **Blender** (also the universal hub: it imports STEP/3DM/OBJ) | export glTF (`type: gltf`) or the mesh (`type: mesh`) | glTF `NORMAL` / inferred · export order |
-| **Rhino / Grasshopper** | write `.vxl.json` points+normals from a GH definition, or export the chip mesh | as authored |
+| **Blender** (also the universal hub: it imports STEP/3DM/OBJ) | the **addon** ([integrations/blender](../integrations/blender/)): mesh vertices / faces / islands, curves as ropes, empties → `.vxl.json` (`type: vxl`); or glTF (`type: gltf`) / the mesh (`type: mesh`) | vertex/face/thin-axis/radial · vertex or curve order |
+| **Rhino / Grasshopper** | the **script component** ([integrations/grasshopper](../integrations/grasshopper/)): points + normals + strand → `.vxl.json` (`type: vxl`) | as authored (estimated if absent) |
 | **LX Studio / Chromatik** | `vox import model.lxm --fixtures ~/Chromatik/Fixtures` ([interop/lxm.md](interop/lxm.md)) | assigned (LX has none) · as generated |
 | anything else | `.vxl.json` by hand (it's JSON: `pixels[].p`, `.n`, …) | as authored |
 

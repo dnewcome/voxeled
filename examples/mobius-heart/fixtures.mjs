@@ -30,4 +30,13 @@ export const FIXTURES = {
   // LEDs along a path (a diffused rope on a tube, a strip along an edge): see src/fixtures/rope.mjs.
   //   { type: rope, params: { path: tube-1, count: 600, pitchMM: 152, radiusMM: 26, angleDeg: 60 } }
   rope: (params) => ropeFixture(params),
+  // A baked fixture file (.vxl.json) — what the Blender addon and the Grasshopper component write,
+  // or a scene from `vox import`. Must carry normals (`vox check` enforces it).
+  //   { type: vxl, params: { file: piece.vxl.json } }
+  vxl: (params) => {
+    const fx = JSON.parse(readFileSync(path.resolve(params.file), "utf8"));
+    if (!Array.isArray(fx.pixels) || !fx.pixels.length) throw new Error(`${params.file}: no pixels`);
+    if (fx.pixels.some((p) => !p.n)) throw new Error(`${params.file}: pixels without emission normals — run vox check`);
+    return withEmitter({ pixels: fx.pixels, meta: { ...(fx.meta || {}), instances: undefined, structures: undefined } }, params.emitter || fx.meta?.emitter || BARE_LED);
+  },
 };

@@ -1,0 +1,10 @@
+schema_version = "1.0.0"
+id = "voxeled_export"
+version = "0.1.0"
+name = "voxeled fixture export"
+tagline = "Export LED positions + emission normals as a voxeled fixture (.vxl.json)"
+maintainer = "voxeled"
+type = "add-on"
+blender_version_min = "4.2.0"
+license = ["SPDX:MIT"]
+tags = ["Import-Export"]
