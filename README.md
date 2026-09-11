@@ -126,6 +126,10 @@ export const wave = ({ x, y, z }, t) =>
   gizmo move/rotate, duplicate/delete/add, turn an entry into a **matrix**, save — editing the same
   git-diffable layout YAML the hub runs (`GET/POST /layout`, live, file-watched). Rings and arrays
   are one line of YAML ([placement generators](docs/FORMAT.md#placement-generators--arrays-rings)).
+- **LEDs placed on a structure** — name a path (inline, or from a file like thread-3d's
+  `tubes.json`) and a `rope` fixture follows it: LEDs offset from the axis, wrapped at an angle,
+  normals radial — the Thread workflow as data ([paths & ropes](docs/FORMAT.md#paths--ropes--placing-leds-on-a-structure)).
+  `along:` spaces whole instances along a path.
 - **The sculpture's own CAD** — a layout's `structures:` draw the steel (STL/GLB/OBJ) around the LEDs:
   translucent context in the viewer, an opaque **occluder** in the simulator. The demo ships the
   heart's rails + rods from its build123d model (`M` to toggle).

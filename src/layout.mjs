@@ -8,6 +8,7 @@
 import { add, matVec, eulerMatrix } from "./vec.mjs";
 import { buildScene } from "./format.mjs";
 import { resolveStructure } from "./structures.mjs";
+import { loadPaths, resolvePath, samplePath } from "./paths.mjs";
 
 // instances: [{ name, fixtureName, fixture:{pixels,meta}, pos:[x,y,z]mm, rotDeg:[rx,ry,rz] }]
 // Each instance carries its OWN resolved fixture, so a rig can mix different fixtures.
@@ -59,12 +60,24 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
 //   ring:  { count, radiusMM, startDeg: 0, facing: center|out|tangent|none } a circle around the entry's pos (Y up)
 // `each: { … }` applies per generated instance (e.g. a rotDeg). Every expanded instance carries
 // `src: { i, k }` — the layout entry index and element index — so the builder can edit the source.
-export function expandInstances(list) {
+//   along: { path: name|[[x,y,z]…], count, orient: tangent|none, startMM, endMM } instances spaced along a path
+export function expandInstances(list, { paths = {} } = {}) {
   const out = [];
   list.forEach((inst, i) => {
     const base = inst.pos || [0, 0, 0], rotDeg = inst.rotDeg || [0, 0, 0], R = eulerMatrix(rotDeg);
     const stem = inst.name || inst.fixture;
-    const { array, ring, each, ...rest } = inst;
+    const { array, ring, along, each, ...rest } = inst;
+    if (along) {
+      const P = resolvePath(along.path, paths);
+      const samples = samplePath(P, { count: along.count, spacingMM: along.spacingMM, startMM: along.startMM, endMM: along.endMM });
+      samples.forEach((sm, k) => {
+        // orient: the instance's +Z follows the tangent (yaw about Y, pitch about X)
+        const T = sm.t;
+        const rot = (along.orient || "tangent") === "tangent" ? [(-Math.asin(Math.max(-1, Math.min(1, T[1]))) * 180) / Math.PI, (Math.atan2(T[0], T[2]) * 180) / Math.PI, rotDeg[2]] : rotDeg;
+        out.push({ ...rest, ...(each || {}), name: `${stem}-${k}`, pos: add(base, matVec(R, sm.p)), rotDeg: each?.rotDeg || rot.map((x) => +x.toFixed(3)), src: { i, k } });
+      });
+      return;
+    }
     if (array) {
       const [nx = 1, ny = 1, nz = 1] = array.count || [1, 1, 1];
       const [sx = 0, sy = 0, sz = 0] = array.spacing || [0, 0, 0];
@@ -98,6 +111,9 @@ export function expandInstances(list) {
 //   show: { holdS, fadeS, scenes: [ { name, pattern, params } ] }   (optional)
 export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = null } = {}) {
   const fixDefs = doc.fixtures || {};
+  // Named paths (`paths:` — inline points or JSON files such as thread-3d's tubes.json), available
+  // to `rope` fixtures (params.path: name) and `along:` generators.
+  const paths = loadPaths(doc.paths, { baseDir });
   const cache = {};
   const getFixture = (fixtureName) => {
     if (cache[fixtureName]) return cache[fixtureName];
@@ -105,10 +121,10 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
     if (!def) throw new Error(`layout references undefined fixture "${fixtureName}"`);
     const make = fixtures[def.type];
     if (!make) throw new Error(`unknown fixture type "${def.type}" (registered: ${Object.keys(fixtures).join(", ") || "none"})`);
-    return (cache[fixtureName] = make(def.params || {}));
+    return (cache[fixtureName] = make({ ...(def.params || {}), paths }));
   };
 
-  const instances = expandInstances(doc.instances || []).map((inst, k) => {
+  const instances = expandInstances(doc.instances || [], { paths }).map((inst, k) => {
     if (!inst.fixture) throw new Error(`instance #${k} is missing a "fixture"`);
     const def = fixDefs[inst.fixture] || {};
     // The output patch merges the fixture-level default with per-instance overrides.

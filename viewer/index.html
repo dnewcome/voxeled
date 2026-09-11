@@ -85,6 +85,25 @@
   <div class="g6"><input id="b-cx" type="number" value="2" min="1" /><input id="b-cy" type="number" value="1" min="1" /><input id="b-cz" type="number" value="1" min="1" />
     <input id="b-sx" type="number" value="1500" step="100" /><input id="b-sy" type="number" value="0" step="100" /><input id="b-sz" type="number" value="0" step="100" /></div>
   <div class="btns"><button id="b-array">▦ make array</button></div>
+  <div class="lab" title="how this fixture's LEDs emit — drives the simulator">emitter — angle° · size · core · soft · gain · glow</div>
+  <div class="g6">
+    <input id="b-ea" type="number" step="5" min="1" max="179" title="viewingAngleDeg: datasheet full angle at 50% (120 = Lambertian, 10 = spot, 170 = diffused rope)" />
+    <input id="b-es" type="number" step="0.05" min="0.05" max="2" title="sizeFrac: body edge as a fraction of pitch (1 = contiguous tiles)" />
+    <input id="b-ec" type="number" step="0.05" min="0.05" max="1" title="coreFrac: lit fraction of the body" />
+    <input id="b-eo" type="number" step="0.05" min="0" max="1" title="softness: edge diffusion of the core" />
+    <input id="b-eg" type="number" step="0.1" min="0" max="5" title="gain: emissive intensity (>1 feeds bloom)" />
+    <input id="b-el" type="number" step="0.1" min="0" max="3" title="glow: bloom contribution" />
+  </div>
+  <div class="lab" title="the patch: where this fixture's pixels are sent">output — protocol · host · port · universe/offset · channel · order</div>
+  <div class="g6">
+    <select id="b-op" title="protocol"><option value="">none</option><option value="artnet">artnet</option><option value="ddp">ddp</option><option value="danmx">danmx</option></select>
+    <input id="b-oh" placeholder="host" title="host / IP" />
+    <input id="b-oport" type="number" placeholder="port" title="UDP port (blank = protocol default)" />
+    <input id="b-ou" type="number" placeholder="uni" title="artnet: start universe · ddp: byte offset · danmx: start pixel" />
+    <input id="b-oc" type="number" placeholder="ch" title="artnet: start channel (1-based)" />
+    <select id="b-ob" title="byte order"><option>rgb</option><option>grb</option><option>bgr</option><option>rbg</option><option>brg</option><option>gbr</option><option>rgbw</option><option>grbw</option></select>
+  </div>
+  <div class="btns"><label style="font-size:11px;color:var(--dim)"><input type="checkbox" id="b-scope" /> apply emitter/output to every <b id="b-scope-fx">fixture</b> instance (fixture default), not just this one</label></div>
   <div class="lab">add an instance</div>
   <div class="btns"><select id="b-fixture"></select><button id="b-add">＋ add</button></div>
   <div class="btns"><button id="b-save" style="flex:2">💾 save layout</button></div>
@@ -470,6 +489,7 @@ function select(k) {
   $("b-sub").textContent = (generated ? `element ${e.src.k} of a generated ${e.entry.array ? "array" : "ring"} — moving it moves the whole ${e.entry.array ? "array" : "ring"}` : `layout entry #${e?.src?.i ?? "?"}`)
     + (worldStructs ? ` · ${worldStructs} world-placed structure(s) stay put (attach CAD to a fixture to move it along)` : "");
   fillFields(tf);
+  fillEmitterAndOutput(inst);
   proxy.position.set(...tf.pos);
   proxy.rotation.set(tf.rotDeg[0] * D2R, tf.rotDeg[1] * D2R, tf.rotDeg[2] * D2R, "ZYX");
   gizmo.attach(proxy); gizmo.visible = true; gizmo.enabled = true;
@@ -480,6 +500,51 @@ function select(k) {
 }
 function deselect() { selected = null; gizmo.detach(); gizmo.visible = false; gizmo.enabled = false; boxHelper.visible = false; $("b-sel").textContent = "click an instance to select it"; $("b-sub").textContent = ""; }
 function fillFields(tf) { ["px", "py", "pz"].forEach((id, i) => ($("b-" + id).value = Math.round(tf.pos[i]))); ["rx", "ry", "rz"].forEach((id, i) => ($("b-" + id).value = +tf.rotDeg[i].toFixed(1))); }
+
+// ── emitter + patch editing: the selected instance's effective values, written back to its
+// layout entry (or, with the scope box, to the fixture definition so every instance inherits) ──
+const EMIT_FIELDS = [["ea", "viewingAngleDeg"], ["es", "sizeFrac"], ["ec", "coreFrac"], ["eo", "softness"], ["eg", "gain"], ["el", "glow"]];
+function fillEmitterAndOutput(inst) {
+  const em = { ...EMIT_DEFAULT, ...(inst.emitter || {}) };
+  for (const [id, key] of EMIT_FIELDS) $("b-" + id).value = em[key];
+  const o = inst.output || {};
+  $("b-op").value = o.protocol || "";
+  $("b-oh").value = o.host || "";
+  $("b-oport").value = o.port ?? "";
+  $("b-ou").value = o.protocol === "ddp" ? (o.offset ?? "") : o.protocol === "danmx" ? (o.startPixel ?? "") : (o.universe ?? "");
+  $("b-oc").value = o.channel ?? "";
+  $("b-ob").value = o.byteOrder || "rgb";
+  $("b-scope-fx").textContent = inst.fixture;
+}
+// where edits go: the instance's own layout entry, or the fixture definition (scope box)
+function editTarget() {
+  const e = entryOf(selected); if (!e) return null;
+  if ($("b-scope").checked) { const fx = scene.meta.instances[selected].fixture; return (layout.doc.fixtures[fx] ||= {}); }
+  return e.entry;
+}
+async function commitEmitter() {
+  const t = editTarget(); if (!t) return;
+  const em = {};
+  for (const [id, key] of EMIT_FIELDS) { const v = +$("b-" + id).value; if (Number.isFinite(v)) em[key] = v; }
+  t.emitter = em;
+  await postLayout(false);
+}
+async function commitOutput() {
+  const t = editTarget(); if (!t) return;
+  const protocol = $("b-op").value;
+  if (!protocol) { delete t.output; return postLayout(false); }
+  const num = (id) => { const v = $("b-" + id).value; return v === "" ? undefined : +v; };
+  const out = { protocol, host: $("b-oh").value.trim() || undefined, port: num("oport"), byteOrder: $("b-ob").value };
+  const u = num("ou"), c = num("oc");
+  if (protocol === "artnet") { out.universe = u ?? 0; if (c !== undefined) out.channel = c; }
+  else if (protocol === "ddp") out.offset = u ?? 0;
+  else if (protocol === "danmx") out.startPixel = u ?? 0;
+  for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k];
+  t.output = out;
+  await postLayout(false);
+}
+for (const [id] of EMIT_FIELDS) $("b-" + id).addEventListener("change", commitEmitter);
+for (const id of ["op", "oh", "oport", "ou", "oc", "ob"]) $("b-" + id).addEventListener("change", commitOutput);
 function updateBox() {
   if (selected == null) return;
   const b = boxHelper.box.makeEmpty(); const v = new THREE.Vector3(), m = new THREE.Matrix4();

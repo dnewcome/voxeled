@@ -5,6 +5,7 @@ import path from "node:path";
 import { sampleHeart } from "./heart.mjs";
 import { gltfToFixture } from "../../src/io/gltf-import.mjs";
 import { meshToFixture } from "../../src/io/mesh-import.mjs";
+import { ropeFixture } from "../../src/fixtures/rope.mjs";
 
 // How a fixture EMITS — the simulator's physics knobs (viewer sim mode; see docs/FORMAT.md).
 //   viewingAngleDeg — datasheet full angle at 50% intensity: 120 = a typical SMD LED (Lambertian),
@@ -26,4 +27,7 @@ export const FIXTURES = {
   // Mechanical CAD export (STL/OBJ/GLB) with each LED chip as its own body → chip-island import.
   //   { type: mesh, params: { file: model.stl, scaleToMM: 1, normalSign: outward, order: chain, maxTris: 40 } }
   mesh: (params) => withEmitter(meshToFixture(readFileSync(path.resolve(params.file)), { ...params, file: params.file }), params.emitter || BARE_LED),
+  // LEDs along a path (a diffused rope on a tube, a strip along an edge): see src/fixtures/rope.mjs.
+  //   { type: rope, params: { path: tube-1, count: 600, pitchMM: 152, radiusMM: 26, angleDeg: 60 } }
+  rope: (params) => ropeFixture(params),
 };

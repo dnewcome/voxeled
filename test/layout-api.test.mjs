@@ -76,19 +76,31 @@ ok(readFileSync(yamlPath, "utf8").startsWith("# voxeled layout"), "the file's co
 scene = await (await fetch(`${base}/scene.json`)).json();
 ok(scene.meta.instances.map((i) => i.name).join() === "row-0-0,row-1-0,row-2-0" && scene.meta.instances[0].pos[0] === -2000, "expanded array instances are named and centred");
 
+// ── emitter + patch edits (what the builder panel writes) ─────────────────────
+doc.instances[0].emitter = { viewingAngleDeg: 30, softness: 0.9 };            // on the array entry → all 3 elements
+doc.instances[0].output = { protocol: "ddp", host: "10.0.0.9", offset: 0 };
+doc.instances.push({ fixture: "heart", name: "solo", pos: [0, 0, 4000] });       // a plain instance: inherits the fixture default
+doc.fixtures.heart.output = { protocol: "artnet", host: "10.0.0.5", universe: 4 }; // fixture default
+r = await (await fetch(`${base}/layout?write=1`, { method: "POST", body: JSON.stringify(doc) })).json();
+scene = await (await fetch(`${base}/scene.json`)).json();
+ok(r.ok && scene.meta.instances[0].emitter.viewingAngleDeg === 30 && scene.meta.instances[0].emitter.sizeFrac === 1.0, "instance emitter override merges over the fixture default");
+ok(scene.meta.instances[2].output.protocol === "ddp" && scene.meta.instances[3].output.protocol === "artnet" && scene.meta.instances[3].output.universe === 4, "entry-level output overrides the fixture-level patch; a plain instance inherits the default");
+const savedPatch = parseYAML(readFileSync(yamlPath, "utf8"));
+ok(savedPatch.instances[0].output.host === "10.0.0.9" && savedPatch.fixtures.heart.output.universe === 4, "…and both land in the saved YAML");
+
 // ── a bad doc is rejected and nothing changes ─────────────────────────────────
 const bad = await fetch(`${base}/layout`, { method: "POST", body: JSON.stringify({ ...doc, instances: [{ fixture: "nope" }] }) });
 ok(bad.status === 400 && /unknown fixture|undefined fixture/.test((await bad.json()).error), "a layout referencing a missing fixture → 400 with the error");
 scene = await (await fetch(`${base}/scene.json`)).json();
-ok(scene.meta.instances.length === 3, "…and the running scene is untouched");
+ok(scene.meta.instances.length === 4, "…and the running scene is untouched");
 
 // ── external edit → watched file reloads ───────────────────────────────────────
 const text = readFileSync(yamlPath, "utf8").replace("count: [3, 1, 1]", "count: [4, 1, 1]");
 await sleep(50);
 writeFileSync(yamlPath, text);
 let reloaded = false;
-for (let i = 0; i < 30; i++) { await sleep(100); scene = await (await fetch(`${base}/scene.json`)).json(); if (scene.meta.instances.length === 4) { reloaded = true; break; } }
-ok(reloaded, "editing the file on disk reloads the scene (4 instances)");
+for (let i = 0; i < 30; i++) { await sleep(100); scene = await (await fetch(`${base}/scene.json`)).json(); if (scene.meta.instances.length === 5) { reloaded = true; break; } }
+ok(reloaded, "editing the file on disk reloads the scene (4-wide array + solo = 5 instances)");
 ok(/reloaded/.test(log), "…and the hub logs the reload");
 
 ws.destroy();

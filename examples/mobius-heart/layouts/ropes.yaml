@@ -1,0 +1,32 @@
+# voxeled layout — LEDs PLACED ON A STRUCTURE: three diffused LED ropes zip-tied along one steel
+# tube, the way the Thread sculpture is built. The tube is a named PATH; each rope is a `rope`
+# fixture that follows it, offset by the rope radius and wrapped at its own angle around the tube
+# (Thread's three ropes sit at 60°, 180°, 300°). The emission normal of every LED is radial —
+# away from the tube — so the simulator (S) shows each rope lit from its own side.
+#   run with:  node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/ropes.yaml
+# For the real Thread: paths from thread-3d's tubes.json —
+#   paths: { tube-1: { file: ../../../thread-3d/model/out/tubes.json, index: 0, scaleToMM: 1000 } }
+name: ropes
+units: mm
+
+paths:
+  # an S-curved tube, 6 m long, rising as it goes (mm)
+  tube: [[-3000, 600, 0], [-1800, 900, 500], [-600, 1100, 300], [600, 1200, -300], [1800, 1000, -500], [3000, 700, 0]]
+
+fixtures:
+  rope-top:   { type: rope, params: { path: tube, pitchMM: 33, radiusMM: 40, angleDeg: 60 } }
+  rope-back:  { type: rope, params: { path: tube, pitchMM: 33, radiusMM: 40, angleDeg: 180 } }
+  rope-front: { type: rope, params: { path: tube, pitchMM: 33, radiusMM: 40, angleDeg: 300 } }
+
+instances:
+  - { fixture: rope-top,   name: top }
+  - { fixture: rope-back,  name: back }
+  - { fixture: rope-front, name: front }
+
+show:
+  holdS: 4
+  fadeS: 2
+  scenes:
+    - { name: chase along the tube,    pattern: ribbonChase, params: { loops: 2 } }
+    - { name: wipe along X (world),    pattern: worldWipe, params: { axis: 0, space: world, speedMM: 900, spacingMM: 2400 } }
+    - { name: normals (radial),        pattern: normalRGB }

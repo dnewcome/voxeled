@@ -120,6 +120,35 @@ LED, a diffused strip, and a glowing rope are the same body with different `view
 `color × lobe(view angle) × core`, its back is dark backing, and both write depth, so the bodies
 occlude one another (a panel ribbon's quads *are* the ribbon, dark on the back).
 
+## Paths & ropes — placing LEDs on a structure
+
+Thread's steel was the *input*; its LEDs were *derived* — diffused ropes wrapped along the tubes at
+angles fixed from as-built photos. That workflow is data now: a layout names **paths** (polylines
+in mm — inline, or loaded from a JSON file such as thread-3d's `tubes.json`), and a **`rope`**
+fixture follows one: parallel-transport frames along the path, each LED offset `radiusMM` from
+the axis in the direction `angleDeg` (+ `twistDegPerM · s`) around it, its emission normal
+**radial** — away from the tube it's fixed to. `s` runs 0→1 along the rope.
+
+```yaml
+paths:
+  tube-1: { file: ../../../thread-3d/model/out/tubes.json, index: 0, scaleToMM: 1000 }  # from a file
+  edge:   [[0, 0, 0], [1200, 0, 0], [1200, 800, 0]]                                     # inline, mm
+fixtures:
+  rope-A: { type: rope, params: { path: tube-1, pitchMM: 152, radiusMM: 26, angleDeg: 60 } }
+  rope-B: { type: rope, params: { path: tube-1, pitchMM: 152, radiusMM: 26, angleDeg: 180 } }
+instances:
+  - { fixture: rope-A, name: A }
+  - { fixture: rope-B, name: B }
+  - { fixture: heart, along: { path: edge, count: 4, orient: tangent } }   # instances spaced ALONG a path
+```
+
+`rope` params: `path` (name or points), `count` **or** `pitchMM`, `radiusMM`, `angleDeg` (0 = on
+top of the tube: N₀ is *up* projected ⟂ the tangent, as in `place_leds.py`), `twistDegPerM`,
+`startMM`/`endMM`. Ropes default to a diffused emitter (170°, soft). The **`along:`** generator
+spaces instances along a path with their +Z following the tangent (`orient: none` keeps the
+entry's `rotDeg`). Example: `layouts/ropes.yaml` — three ropes at 60°/180°/300° on one S-curved
+tube.
+
 ## Placement generators — arrays, rings
 
 One `instances:` entry can stand for many. Generators expand into plain instances at load time, so

@@ -49,6 +49,10 @@ format. Press **E**:
   moved fixture — and the panel says *unsaved* until you **save**, which writes the YAML back
   (comment header preserved).
 - **duplicate**, **delete**, **＋ add** an instance of any fixture the layout defines.
+- **emitter** (viewing angle, body size, core, softness, gain, glow — the simulator reacts at once)
+  and **output** (protocol, host, port, universe/offset, channel, byte order — the patch the hub
+  drives) for the selected instance; tick *apply to every … instance* to write them to the fixture
+  definition instead, so all its instances inherit.
 - **▦ make array** turns the selected entry into a **matrix** — count x·y·z × spacing — expanded by
   the hub into named instances (`heart-2-0-1`…). Moving one element moves the whole array.
   (`grid-3x3.yaml` is now a single `array:` line.) Rings and paths are the same idea in YAML —
