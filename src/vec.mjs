@@ -28,6 +28,14 @@ export function eulerMatrix([rx = 0, ry = 0, rz = 0] = []) {
   ];
 }
 export const matVec = (R, v) => [dot(R[0], v), dot(R[1], v), dot(R[2], v)];
+export const matMul = (A, B) => [0, 1, 2].map((i) => [0, 1, 2].map((j) => A[i][0] * B[0][j] + A[i][1] * B[1][j] + A[i][2] * B[2][j]));
+// Inverse of eulerMatrix: a Z·Y·X rotation matrix back to [rx, ry, rz] in degrees.
+export function matToEulerDeg(R) {
+  const d = 180 / Math.PI;
+  const ry = Math.asin(Math.max(-1, Math.min(1, -R[2][0])));
+  const rx = Math.atan2(R[2][1], R[2][2]), rz = Math.atan2(R[1][0], R[0][0]);
+  return [rx * d, ry * d, rz * d].map((x) => +x.toFixed(4));
+}
 // Transpose = inverse for a rotation matrix.
 export const transpose3 = (R) => [
   [R[0][0], R[1][0], R[2][0]],

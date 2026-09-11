@@ -151,7 +151,8 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
   // (parent = the instance transform); scene-level ones sit once in world space.
   const structures = [];
   instances.forEach((inst, k) => {
-    for (const s of fixDefs[inst.fixtureName]?.structures || [])
+    // from the layout's fixture definition, plus any the fixture itself brought (a baked .vxl scene)
+    for (const s of [...(fixDefs[inst.fixtureName]?.structures || []), ...(inst.fixture.meta?.structures || [])])
       structures.push({ ...resolveStructure(s, { baseDir }, { pos: inst.pos || [0, 0, 0], rotDeg: inst.rotDeg || [0, 0, 0] }, `${inst.name}:${s.name || String(s.file).replace(/^.*[\\/]/, "")}`), inst: k });
   });
   for (const s of doc.structures || []) structures.push(resolveStructure(s, { baseDir }));

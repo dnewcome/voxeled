@@ -35,6 +35,14 @@ if (g) {
   writeFileSync(ghFile, JSON.stringify(g.fx));
   const { scene } = resolveLayout({ name: "t", fixtures: { gh: { type: "vxl", params: { file: ghFile } } }, instances: [{ fixture: "gh", pos: [10, 0, 0] }] }, { fixtures: FIXTURES, patterns: PATTERNS });
   ok(scene.count === 5 && scene.pixels[1].p[0] === 110, "type: vxl loads the exported fixture into a layout (instance transform applied)");
+  // a baked SCENE (export.mjs) brings its steel: the structure's ride-along transform is folded in
+  const withSteel = { ...g.fx, meta: { ...g.fx.meta, structures: [{ name: "frame", file: "/tmp/frame.glb", format: "glb", scaleToMM: 1000, pos: [0, 0, 100], rotDeg: [0, 0, 0], opacity: 0.3, color: "#888", parent: { pos: [1000, 0, 0], rotDeg: [0, 90, 0] }, inst: 0, url: "structure/0.glb" }] } };
+  const steelFile = path.join(dir, "steel.vxl.json");
+  writeFileSync(steelFile, JSON.stringify(withSteel));
+  const s2 = resolveLayout({ name: "t", fixtures: { piece: { type: "vxl", params: { file: steelFile } } }, instances: [{ fixture: "piece", name: "p", pos: [0, 0, 5000] }] }, { fixtures: FIXTURES, patterns: PATTERNS }).scene;
+  const st = s2.meta.structures?.[0];
+  ok(st && st.inst === 0 && st.parent.pos[2] === 5000, "…its structure rides with the NEW instance (parent = the new transform)");
+  ok(st && Math.abs(st.pos[0] - 1100) < 1e-6 && Math.abs(st.pos[2]) < 1e-6 && Math.abs(st.rotDeg[1] - 90) < 1e-6, "…with the export-time instance transform folded into the structure's own placement (yaw 90 → +Z offset became +X)");
 }
 
 // ── Blender core (pure python): islands, faces, curve rope, empty ───────────────

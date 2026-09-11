@@ -6,6 +6,7 @@ import { sampleHeart } from "./heart.mjs";
 import { gltfToFixture } from "../../src/io/gltf-import.mjs";
 import { meshToFixture } from "../../src/io/mesh-import.mjs";
 import { ropeFixture } from "../../src/fixtures/rope.mjs";
+import { add, matVec, eulerMatrix, matMul, matToEulerDeg } from "../../src/vec.mjs";
 
 // How a fixture EMITS — the simulator's physics knobs (viewer sim mode; see docs/FORMAT.md).
 //   viewingAngleDeg — datasheet full angle at 50% intensity: 120 = a typical SMD LED (Lambertian),
@@ -37,6 +38,15 @@ export const FIXTURES = {
     const fx = JSON.parse(readFileSync(path.resolve(params.baseDir || ".", params.file), "utf8"));
     if (!Array.isArray(fx.pixels) || !fx.pixels.length) throw new Error(`${params.file}: no pixels`);
     if (fx.pixels.some((p) => !p.n)) throw new Error(`${params.file}: pixels without emission normals — run vox check`);
-    return withEmitter({ pixels: fx.pixels, meta: { ...(fx.meta || {}), instances: undefined, structures: undefined } }, params.emitter || fx.meta?.emitter || BARE_LED);
+    // A scene exported by export.mjs carries its structures (the steel) placed by the instances
+    // they rode with. Fold that placement into each entry so the baked fixture brings its steel
+    // along wherever it is placed next.
+    const structures = (fx.meta?.structures || []).map((s) => {
+      const { parent, url, inst, ...own } = s;
+      if (!parent) return own;
+      const Rp = eulerMatrix(parent.rotDeg || [0, 0, 0]), Ro = eulerMatrix(own.rotDeg || [0, 0, 0]);
+      return { ...own, pos: add(matVec(Rp, own.pos || [0, 0, 0]), parent.pos || [0, 0, 0]), rotDeg: matToEulerDeg(matMul(Rp, Ro)) };
+    });
+    return withEmitter({ pixels: fx.pixels, meta: { ...(fx.meta || {}), instances: undefined, structures } }, params.emitter || fx.meta?.emitter || BARE_LED);
   },
 };
