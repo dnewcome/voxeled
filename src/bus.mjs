@@ -25,21 +25,24 @@ const MIME = {
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const accept = (key) => crypto.createHash("sha1").update(key + WS_GUID).digest("base64");
 
-// Encode a server->client binary frame (FIN + opcode 0x2, unmasked).
-function encodeBinary(payload) {
-  const n = payload.length;
+// Encode a server->client frame (FIN + opcode, unmasked). 0x2 = binary (pixel frames), 0x1 = text
+// (JSON control messages, e.g. "the scene changed — refetch it").
+function encodeFrame(payload, opcode) {
+  const n = payload.length, first = 0x80 | opcode;
   let header;
   if (n < 126) {
-    header = Buffer.from([0x82, n]);
+    header = Buffer.from([first, n]);
   } else if (n < 65536) {
     header = Buffer.alloc(4);
-    header[0] = 0x82; header[1] = 126; header.writeUInt16BE(n, 2);
+    header[0] = first; header[1] = 126; header.writeUInt16BE(n, 2);
   } else {
     header = Buffer.alloc(10);
-    header[0] = 0x82; header[1] = 127; header.writeBigUInt64BE(BigInt(n), 2);
+    header[0] = first; header[1] = 127; header.writeBigUInt64BE(BigInt(n), 2);
   }
   return Buffer.concat([header, payload]);
 }
+const encodeBinary = (payload) => encodeFrame(payload, 0x2);
+const encodeText = (str) => encodeFrame(Buffer.from(str, "utf8"), 0x1);
 
 // routes: [{ path, file?, content?, contentType }]. `content` may be a Buffer/string served from memory.
 export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir = null } = {}) {
@@ -110,11 +113,18 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir
     const frame = encodeBinary(Buffer.from(payload.buffer, payload.byteOffset, payload.byteLength));
     for (const s of clients) { if (s.writable) s.write(frame); }
   }
+  // JSON control message to every viewer (text frame) — e.g. { type: "scene" } after a layout edit.
+  function broadcastText(obj) {
+    if (!clients.size) return;
+    const frame = encodeText(typeof obj === "string" ? obj : JSON.stringify(obj));
+    for (const s of clients) { if (s.writable) s.write(frame); }
+  }
 
   // The LAN address — what a phone on the same Wi-Fi can reach (first non-internal IPv4).
   const lanIp = Object.values(os.networkInterfaces()).flat().find((i) => i && i.family === "IPv4" && !i.internal)?.address;
   return {
     broadcast,
+    broadcastText,
     clients,
     server,
     url: `http://localhost:${port}/`,

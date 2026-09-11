@@ -13,18 +13,9 @@ fixtures:
     params: { panelsPerSide: 8, pitchMM: 12, twist: mobius }
 
 instances:
-  # front row (nearest the camera, +Z)
-  - { fixture: heart, name: fL, pos: [-1700, 0,  1600] }
-  - { fixture: heart, name: fC, pos: [    0, 0,  1600] }
-  - { fixture: heart, name: fR, pos: [ 1700, 0,  1600] }
-  # middle row
-  - { fixture: heart, name: mL, pos: [-1700, 0,     0] }
-  - { fixture: heart, name: mC, pos: [    0, 0,     0] }
-  - { fixture: heart, name: mR, pos: [ 1700, 0,     0] }
-  # back row (-Z)
-  - { fixture: heart, name: bL, pos: [-1700, 0, -1600] }
-  - { fixture: heart, name: bC, pos: [    0, 0, -1600] }
-  - { fixture: heart, name: bR, pos: [ 1700, 0, -1600] }
+  # One entry, nine hearts: a 3 (X) × 1 (Y) × 3 (Z) matrix centred on the origin — columns spread
+  # in X, rows recede in Z. Elements are named heart-<x>-<y>-<z>. (Was nine hand-placed lines.)
+  - { fixture: heart, name: heart, array: { count: [3, 1, 3], spacing: [1700, 0, 1600], center: true } }
 
 show:
   holdS: 3.5

@@ -27,13 +27,36 @@ By default it loads [`layouts/two-hearts.yaml`](../examples/mobius-heart/layouts
 
 - **drag** orbit · **scroll** zoom
 - **S** — the **simulator**: what the piece actually *looks like* (see below); **B** toggles its bloom
-- **M** — toggle the **model**: the heart's steel rails + rods from its CAD, drawn translucent around
-  the LEDs (an opaque occluder in the simulator). See *Structures* in [`FORMAT.md`](FORMAT.md#structures--the-sculpture-itself-around-the-leds)
+- **M** — cycle the **model** (the heart's steel rails + rods from its CAD): *translucent* →
+  **opaque** (orbit and see exactly what the armature blocks from any vantage) → *hidden*. In the
+  simulator the body is always an opaque occluder. See *Structures* in [`FORMAT.md`](FORMAT.md#structures--the-sculpture-itself-around-the-leds)
+- **E** — the **builder** (see below): author the installation right here
 - **N** — toggle the normal quills
 - the **crossfader** (bottom-left) — dissolve between the first two scenes by hand; **[** / **]**
   nudge it, **A** returns to auto
 - URL params: `?sim=1` boots into the simulator; `?az=<deg>&el=<deg>` sets a reproducible vantage
   (az 0 = in front, 90 = from +X); `?normals=1` shows the quills
+
+## Builder mode (E) — author the installation
+
+Show control plays a finished scene; the **builder** authors it — and it edits **the same layout
+file** the hub loaded, so what you build is a plain, git-diffable YAML, not a separate project
+format. Press **E**:
+
+- **click** an instance to select it (a pink box marks it); a **gizmo** moves it (**T**) or rotates
+  it (**R**) with 10 mm / 5° snapping, or type numbers into the position / rotation fields.
+  Every change is **applied live** — the hub rebuilds the scene, patterns keep running on the
+  moved fixture — and the panel says *unsaved* until you **save**, which writes the YAML back
+  (comment header preserved).
+- **duplicate**, **delete**, **＋ add** an instance of any fixture the layout defines.
+- **▦ make array** turns the selected entry into a **matrix** — count x·y·z × spacing — expanded by
+  the hub into named instances (`heart-2-0-1`…). Moving one element moves the whole array.
+  (`grid-3x3.yaml` is now a single `array:` line.) Rings and paths are the same idea in YAML —
+  see *Placement generators* in [`FORMAT.md`](FORMAT.md#placement-generators--arrays-rings).
+- The file is also **watched**: edit it in your editor and the scene reloads in every open viewer.
+
+Under the hood it's two routes on the hub — `GET /layout` (doc + expanded instances with their
+`src`) and `POST /layout[?write=1]` — and a text message on the bus that tells viewers to refetch.
 
 ## Control it from a phone (QR)
 

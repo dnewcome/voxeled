@@ -48,9 +48,43 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
         rotDeg: inst.rotDeg || [0, 0, 0],
         ...(inst.output ? { output: inst.output } : {}),
         ...(inst.emitter ? { emitter: inst.emitter } : {}), // how this instance's LEDs emit (sim)
+        ...(inst.src ? { src: inst.src } : {}),
       })),
     },
   });
+}
+
+// Placement generators — one layout entry can stand for many instances:
+//   array: { count: [nx, ny, nz], spacing: [sx, sy, sz], center: false }   a matrix in the entry's frame
+//   ring:  { count, radiusMM, startDeg: 0, facing: center|out|tangent|none } a circle around the entry's pos (Y up)
+// `each: { … }` applies per generated instance (e.g. a rotDeg). Every expanded instance carries
+// `src: { i, k }` — the layout entry index and element index — so the builder can edit the source.
+export function expandInstances(list) {
+  const out = [];
+  list.forEach((inst, i) => {
+    const base = inst.pos || [0, 0, 0], rotDeg = inst.rotDeg || [0, 0, 0], R = eulerMatrix(rotDeg);
+    const stem = inst.name || inst.fixture;
+    const { array, ring, each, ...rest } = inst;
+    if (array) {
+      const [nx = 1, ny = 1, nz = 1] = array.count || [1, 1, 1];
+      const [sx = 0, sy = 0, sz = 0] = array.spacing || [0, 0, 0];
+      const off = array.center ? [((nx - 1) * sx) / 2, ((ny - 1) * sy) / 2, ((nz - 1) * sz) / 2] : [0, 0, 0];
+      let k = 0;
+      for (let z = 0; z < nz; z++) for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++, k++) {
+        const local = [x * sx - off[0], y * sy - off[1], z * sz - off[2]];
+        out.push({ ...rest, ...(each || {}), name: `${stem}-${x}-${y}${nz > 1 ? `-${z}` : ""}`, pos: add(base, matVec(R, local)), rotDeg: each?.rotDeg || rotDeg, src: { i, k } });
+      }
+    } else if (ring) {
+      const n = Math.max(1, ring.count | 0), r = ring.radiusMM || 0, start = ring.startDeg || 0, facing = ring.facing || "center";
+      for (let k = 0; k < n; k++) {
+        const a = start + (360 * k) / n, rad = (a * Math.PI) / 180;
+        const local = [r * Math.sin(rad), 0, r * Math.cos(rad)];
+        const yaw = facing === "center" ? a + 180 : facing === "out" ? a : facing === "tangent" ? a + 90 : rotDeg[1];
+        out.push({ ...rest, ...(each || {}), name: `${stem}-${k}`, pos: add(base, matVec(R, local)), rotDeg: [rotDeg[0], yaw, rotDeg[2]], src: { i, k } });
+      }
+    } else out.push({ ...inst, src: { i } });
+  });
+  return out;
 }
 
 // Turn a parsed YAML layout doc into a { scene, show } using registries:
@@ -74,7 +108,7 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
     return (cache[fixtureName] = make(def.params || {}));
   };
 
-  const instances = (doc.instances || []).map((inst, k) => {
+  const instances = expandInstances(doc.instances || []).map((inst, k) => {
     if (!inst.fixture) throw new Error(`instance #${k} is missing a "fixture"`);
     const def = fixDefs[inst.fixture] || {};
     // The output patch merges the fixture-level default with per-instance overrides.
@@ -92,6 +126,7 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
       rotDeg: inst.rotDeg,
       output,
       emitter,
+      src: inst.src, // which layout entry (and which generated element) this came from — for the builder
     };
   });
   if (!instances.length) throw new Error("layout has no instances");
@@ -99,9 +134,10 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
   // Structures (the sculpture's own CAD): per-fixture ones ride along with every instance
   // (parent = the instance transform); scene-level ones sit once in world space.
   const structures = [];
-  for (const inst of instances)
+  instances.forEach((inst, k) => {
     for (const s of fixDefs[inst.fixtureName]?.structures || [])
-      structures.push(resolveStructure(s, { baseDir }, { pos: inst.pos || [0, 0, 0], rotDeg: inst.rotDeg || [0, 0, 0] }, `${inst.name}:${s.name || String(s.file).replace(/^.*[\\/]/, "")}`));
+      structures.push({ ...resolveStructure(s, { baseDir }, { pos: inst.pos || [0, 0, 0], rotDeg: inst.rotDeg || [0, 0, 0] }, `${inst.name}:${s.name || String(s.file).replace(/^.*[\\/]/, "")}`), inst: k });
+  });
   for (const s of doc.structures || []) structures.push(resolveStructure(s, { baseDir }));
 
   const scene = buildSceneFromLayout({

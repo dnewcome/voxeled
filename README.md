@@ -122,6 +122,10 @@ export const wave = ({ x, y, z }, t) =>
   Each point carries its fixture index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can
   group per fixture. **Confirmed rendering on TiXL 4.1.**
 - **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
+- **Builder mode** (`E` in the viewer) — author the installation *in* voxeled: click-select,
+  gizmo move/rotate, duplicate/delete/add, turn an entry into a **matrix**, save — editing the same
+  git-diffable layout YAML the hub runs (`GET/POST /layout`, live, file-watched). Rings and arrays
+  are one line of YAML ([placement generators](docs/FORMAT.md#placement-generators--arrays-rings)).
 - **The sculpture's own CAD** — a layout's `structures:` draw the steel (STL/GLB/OBJ) around the LEDs:
   translucent context in the viewer, an opaque **occluder** in the simulator. The demo ships the
   heart's rails + rods from its build123d model (`M` to toggle).

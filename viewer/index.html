@@ -5,33 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>voxeled — viewer</title>
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: dark; --pink:#ff5e87; --ink:#eef3ff; --dim:#8da0c2; --line:rgba(120,150,210,0.22); --panel:rgba(10,14,24,0.82); }
   html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #dfe6f3; }
   canvas { display: block; }
-  #hud { position: fixed; top: 12px; left: 12px; z-index: 10;
-    background: rgba(10,14,24,0.82); backdrop-filter: blur(8px);
-    border: 1px solid rgba(120,150,210,0.22); border-radius: 12px;
-    padding: 12px 15px; width: 250px; font-size: 12.5px; line-height: 1.55;
+  .panel { position: fixed; z-index: 10; background: var(--panel); backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 15px; font-size: 12.5px; line-height: 1.55;
     box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-  #hud h1 { font-size: 12px; margin: 0 0 8px; letter-spacing: .4px; color: #ff5e87;
-    font-weight: 700; text-transform: uppercase; }
-  #hud .row { display: flex; justify-content: space-between; gap: 10px; }
-  #hud .row span:first-child { color: #8da0c2; }
-  #hud .row span:last-child { color: #eef3ff; font-variant-numeric: tabular-nums; }
-  #hud .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffcf4d; margin-right:6px; }
-  #hud .dot.live { background:#69e08f; }
-  #hud hr { border: none; border-top: 1px solid rgba(120,150,210,0.16); margin: 10px 0 8px; }
+  #hud { top: 12px; left: 12px; width: 250px; }
+  #hud h1, #build h1 { font-size: 12px; margin: 0 0 8px; letter-spacing: .4px; color: var(--pink); font-weight: 700; text-transform: uppercase; }
+  .row { display: flex; justify-content: space-between; gap: 10px; }
+  .row span:first-child { color: var(--dim); }
+  .row span:last-child { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffcf4d; margin-right:6px; }
+  .dot.live { background:#69e08f; }
+  hr { border: none; border-top: 1px solid rgba(120,150,210,0.16); margin: 10px 0 8px; }
   #xf .lbl { display:flex; justify-content:space-between; gap:8px; font-size:11px; margin-bottom:5px; }
-  #xf .lbl b { color:#eef3ff; font-weight:600; }
+  #xf .lbl b { color:var(--ink); font-weight:600; }
   #xf .lbl .a { color:#ff8fb0; } #xf .lbl .b { color:#8fd0ff; }
-  #xf input[type=range] { width:100%; accent-color:#ff5e87; margin:2px 0 8px; }
-  #xf button { width:100%; cursor:pointer; font-size:11.5px; color:#dfe6f3;
-    background:rgba(120,150,210,0.14); border:1px solid rgba(120,150,210,0.3);
-    border-radius:8px; padding:5px 8px; }
-  #xf button.on { background:#ff5e87; border-color:#ff5e87; color:#1a0410; font-weight:700; }
+  input[type=range] { width:100%; accent-color:var(--pink); margin:2px 0 8px; }
+  button { cursor:pointer; font-size:11.5px; color:#dfe6f3; background:rgba(120,150,210,0.14); border:1px solid rgba(120,150,210,0.3); border-radius:8px; padding:5px 8px; }
+  button.on { background:var(--pink); border-color:var(--pink); color:#1a0410; font-weight:700; }
+  button:disabled { opacity: .4; cursor: default; }
+  #xf button { width:100%; }
   #help { position: fixed; bottom: 10px; left: 12px; z-index: 10; color: #56688a; font-size: 11px; }
   #h-mode.sim { color: #ffcf4d; }
+  /* builder */
+  #build { top: 12px; right: 12px; width: 300px; }
+  #build[hidden] { display: none; }
+  #build .sel { font-weight: 700; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
+  #build .sub { color: var(--dim); font-size: 11px; margin-bottom: 8px; min-height: 14px; }
+  #build .lab { font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--dim); margin: 8px 0 4px; }
+  .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .g3 input, #build select, .g6 input { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; color: var(--ink);
+    background: rgba(0,0,0,0.35); border: 1px solid rgba(120,150,210,0.3); border-radius: 7px; padding: 4px 6px; font-variant-numeric: tabular-nums; }
+  .g6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .btns button { flex: 1 1 auto; }
+  #b-status { font-size: 11px; color: var(--dim); margin-top: 8px; min-height: 14px; }
+  #b-status.dirty { color: #ffcf4d; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -40,7 +52,7 @@
 </script>
 </head>
 <body>
-<div id="hud">
+<div id="hud" class="panel">
   <h1>♥ voxeled viewer</h1>
   <div class="row"><span>Scene</span><span id="h-name">—</span></div>
   <div class="row"><span>Instances</span><span id="h-inst">—</span></div>
@@ -56,11 +68,35 @@
     <button id="xf-auto" class="on">⟳ Auto-crossfade</button>
   </div>
 </div>
-<div id="help">drag orbit · scroll zoom · <b>S</b> sim · <b>B</b> bloom · <b>M</b> model · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
+
+<div id="build" class="panel" hidden>
+  <h1>⌘ builder</h1>
+  <div class="sel" id="b-sel">click an instance to select it</div>
+  <div class="sub" id="b-sub"></div>
+  <div class="lab">position (mm)</div>
+  <div class="g3"><input id="b-px" type="number" step="10" /><input id="b-py" type="number" step="10" /><input id="b-pz" type="number" step="10" /></div>
+  <div class="lab">rotation (° x · y · z)</div>
+  <div class="g3"><input id="b-rx" type="number" step="5" /><input id="b-ry" type="number" step="5" /><input id="b-rz" type="number" step="5" /></div>
+  <div class="btns">
+    <button id="b-move" class="on" title="T">↔ move</button><button id="b-rot" title="R">↻ rotate</button>
+    <button id="b-dup">⧉ duplicate</button><button id="b-del" title="Delete">✕ delete</button>
+  </div>
+  <div class="lab">array — count x·y·z, spacing x·y·z (mm)</div>
+  <div class="g6"><input id="b-cx" type="number" value="2" min="1" /><input id="b-cy" type="number" value="1" min="1" /><input id="b-cz" type="number" value="1" min="1" />
+    <input id="b-sx" type="number" value="1500" step="100" /><input id="b-sy" type="number" value="0" step="100" /><input id="b-sz" type="number" value="0" step="100" /></div>
+  <div class="btns"><button id="b-array">▦ make array</button></div>
+  <div class="lab">add an instance</div>
+  <div class="btns"><select id="b-fixture"></select><button id="b-add">＋ add</button></div>
+  <div class="btns"><button id="b-save" style="flex:2">💾 save layout</button></div>
+  <div id="b-status"></div>
+</div>
+
+<div id="help">drag orbit · scroll zoom · <b>E</b> builder · <b>S</b> sim · <b>B</b> bloom · <b>M</b> model · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
 
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
+import { TransformControls } from "./vendor/TransformControls.js";
 import { EffectComposer } from "./vendor/postprocessing/EffectComposer.js";
 import { RenderPass } from "./vendor/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "./vendor/postprocessing/UnrealBloomPass.js";
@@ -70,7 +106,10 @@ import { OBJLoader } from "./vendor/loaders/OBJLoader.js";
 import { GLTFLoader } from "./vendor/loaders/GLTFLoader.js";
 
 const $ = (id) => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+const D2R = Math.PI / 180;
 
+// ── renderer / scene / camera ─────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
@@ -79,8 +118,7 @@ document.body.appendChild(renderer.domElement);
 
 const scene3 = new THREE.Scene();
 scene3.background = new THREE.Color(0x05060a);
-// Lights only matter for structure meshes (LED dots are unlit; the simulator has its own shading).
-scene3.add(new THREE.AmbientLight(0x8090b0, 0.9));
+scene3.add(new THREE.AmbientLight(0x8090b0, 0.9)); // lights only matter for structure meshes
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
 keyLight.position.set(0.6, 1, 0.8);
 scene3.add(keyLight);
@@ -97,82 +135,35 @@ addEventListener("resize", () => {
   composer?.setSize(innerWidth, innerHeight);
 });
 
-let mesh = null, simMesh = null, normalsLines = null, N = 0;
-
-// ── structures: the sculpture's own CAD (STL/GLB/OBJ) drawn around the LEDs ──────────
-// Dots mode: translucent context. Sim mode: an opaque, depth-writing body — a real occluder, so
-// the steel hides the LEDs behind it just like the piece does. Toggle with M.
+// ── state ─────────────────────────────────────────────────────────────────────
+let scene = null, N = 0, mesh = null, simMesh = null, normalsLines = null;
+let simOn = qs.get("sim") === "1", bloomOn = true;
+let modelMode = { translucent: 0, opaque: 1, hidden: 2 }[qs.get("model")] ?? (+qs.get("model") || 0); // 0 translucent · 1 opaque · 2 hidden (?model=opaque)
+let framed = false;
 const structures = [];
-let structuresOn = true;
-const D2R = Math.PI / 180;
-async function loadStructures(scene) {
-  const list = scene.meta?.structures || [];
-  const stl = new STLLoader(), obj = new OBJLoader(), gltf = new GLTFLoader();
-  await Promise.all(list.map(async (s) => {
-    try {
-      const res = await fetch(s.url);
-      if (!res.ok) throw new Error(`${res.status} ${s.url}`);
-      let object;
-      if (s.format === "stl") { const g = stl.parse(await res.arrayBuffer()); g.computeVertexNormals(); object = new THREE.Mesh(g); }
-      else if (s.format === "obj") object = obj.parse(await res.text());
-      else { const buf = await res.arrayBuffer(); object = await new Promise((ok, err) => gltf.parse(buf, "", (g) => ok(g.scene), err)); }
-      const mats = {
-        dots: new THREE.MeshStandardMaterial({ color: new THREE.Color(s.color), transparent: true, opacity: s.opacity, depthWrite: false, side: THREE.DoubleSide, roughness: 0.8, metalness: 0.2 }),
-        sim: new THREE.MeshStandardMaterial({ color: 0x171a24, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide }),
-      };
-      const meshes = [];
-      object.traverse((o) => { if (o.isMesh) { o.material = mats.dots; meshes.push(o); } });
-      const inner = new THREE.Group();          // the file's own placement: scale (units → mm), rotate, translate
-      inner.add(object);
-      inner.scale.setScalar(s.scaleToMM);
-      inner.rotation.set(s.rotDeg[0] * D2R, s.rotDeg[1] * D2R, s.rotDeg[2] * D2R, "ZYX"); // = voxeled's Z·Y·X Euler
-      inner.position.set(s.pos[0], s.pos[1], s.pos[2]);
-      const outer = new THREE.Group();          // the instance it rides with (per-fixture structures)
-      outer.add(inner);
-      if (s.parent) {
-        outer.rotation.set(s.parent.rotDeg[0] * D2R, s.parent.rotDeg[1] * D2R, s.parent.rotDeg[2] * D2R, "ZYX");
-        outer.position.set(s.parent.pos[0], s.parent.pos[1], s.parent.pos[2]);
-      }
-      scene3.add(outer);
-      structures.push({ group: outer, meshes, mats, name: s.name });
-    } catch (e) { console.warn("VOXELED_STRUCTURE_FAILED", s.name, e); }
-  }));
-  console.log("VOXELED_STRUCTURES_READY", structures.length, "of", list.length);
-  $("h-model").textContent = list.length ? `${structures.length}/${list.length}` : "—";
-  applyMode();
-}
-// ?sim=1 boots straight into the simulator (also how the headless render gate exercises it).
-let simOn = new URLSearchParams(location.search).get("sim") === "1";
-let bloomOn = true;
-// Dim idle colour so the heart's shape is faintly visible even before any frame arrives —
-// lets you tell "geometry didn't load" apart from "no frames on the bus".
+// per-pixel fixture-local geometry, so an instance can be moved live: p = R·local + pos
+let localP = null, localN = null, bodySize = null, instOf = null;
+const instTf = []; // per instance: { pos:[3], rotDeg:[3], R:[[..]] }
 const OFF = new THREE.Color(0x1a2138);
-// Sim idle: every emitter ON at a neutral level, so the physics (lobe, dark backside, occlusion,
-// bloom) reads on a fresh load / headless screenshot before any show frames arrive.
-const SIM_IDLE = new THREE.Color(0.55, 0.52, 0.48);
+const SIM_IDLE = new THREE.Color(0.55, 0.52, 0.48); // sim idle: every emitter on, so the physics reads without frames
 
-// ── the simulator: each LED as an oriented, opaque emissive body ─────────────────
-// One shader covers laser → spot → bare LED → diffused strip → rope, driven by the fixture's
-// emitter profile (scene.meta.instances[k].emitter):
-//   viewingAngleDeg  datasheet full angle at 50% intensity → lobe exponent p = ln½ / ln cos(θ/2)
-//                    (120° ⇒ p = 1, exactly Lambertian; 10° ⇒ ~100, a spot; 170° ⇒ ~0.28, a rope)
-//   sizeFrac         emitter body edge as a fraction of pixel pitch (1.0 = contiguous panel tiles)
-//   coreFrac         lit fraction of the body (the chip/lens);  softness  edge diffusion of that core
-//   gain / glow      emissive intensity / bloom contribution
-// The body is a quad facing the emission normal. Its FRONT emits color × lobe(view angle) × core
-// shape; its BACK is dark backing (the "backside shadow") — and both write depth, so the bodies
-// occlude each other. For a panel ribbon the quads literally are the ribbon, dark on the back.
+// small vector helpers (mirror src/vec.mjs — Z·Y·X Euler, degrees)
+function eulerMatrix([rx = 0, ry = 0, rz = 0] = []) {
+  const cx = Math.cos(rx * D2R), sx = Math.sin(rx * D2R), cy = Math.cos(ry * D2R), sy = Math.sin(ry * D2R), cz = Math.cos(rz * D2R), sz = Math.sin(rz * D2R);
+  return [[cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx], [sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx], [-sy, cy * sx, cy * cx]];
+}
+const matVec = (R, v) => [R[0][0] * v[0] + R[0][1] * v[1] + R[0][2] * v[2], R[1][0] * v[0] + R[1][1] * v[1] + R[1][2] * v[2], R[2][0] * v[0] + R[2][1] * v[1] + R[2][2] * v[2]];
+const matTVec = (R, v) => [R[0][0] * v[0] + R[1][0] * v[1] + R[2][0] * v[2], R[0][1] * v[0] + R[1][1] * v[1] + R[2][1] * v[2], R[0][2] * v[0] + R[1][2] * v[1] + R[2][2] * v[2]];
+
+// ── the simulator: each LED as an oriented, opaque emissive body ────────────────
+// One shader covers laser → spot → bare LED → diffused strip → rope, from the fixture's emitter
+// profile: lobe exponent p = ln½ / ln cos(viewingAngle/2) (120° ⇒ Lambertian), body = quad facing
+// the normal; FRONT emits colour × lobe × core, BACK is dark backing; both write depth (occlusion).
 const EMIT_DEFAULT = { viewingAngleDeg: 120, sizeFrac: 0.9, coreFrac: 0.5, softness: 0.4, gain: 1.6, glow: 1.0 };
-const lobeP = (deg) => {
-  const c = Math.cos((Math.min(179.5, Math.max(0.5, deg)) * Math.PI) / 360);
-  return Math.log(0.5) / Math.log(Math.max(1e-9, c));
-};
-
+const lobeP = (deg) => { const c = Math.cos((Math.min(179.5, Math.max(0.5, deg)) * Math.PI) / 360); return Math.log(0.5) / Math.log(Math.max(1e-9, c)); };
 const SIM_VERT = /* glsl */`
-  attribute vec4 aEmit;                  // lobeP, coreFrac, softness, gain (per instance)
-  varying vec3 vWorldPos, vWorldN, vColor;
-  varying vec2 vUv;
-  varying vec4 vEmit;
+  attribute vec4 aEmit;
+  varying vec3 vWorldPos, vWorldN, vColor; varying vec2 vUv; varying vec4 vEmit;
   void main() {
     vUv = uv; vEmit = aEmit;
     #ifdef USE_INSTANCING_COLOR
@@ -183,189 +174,229 @@ const SIM_VERT = /* glsl */`
     mat4 im = modelMatrix * instanceMatrix;
     vec4 wp = im * vec4(position, 1.0);
     vWorldPos = wp.xyz;
-    vWorldN = normalize(mat3(im) * vec3(0.0, 0.0, 1.0));   // the quad's +Z is the emission normal
+    vWorldN = normalize(mat3(im) * vec3(0.0, 0.0, 1.0));
     gl_Position = projectionMatrix * viewMatrix * wp;
   }`;
 const SIM_FRAG = /* glsl */`
   precision highp float;
-  varying vec3 vWorldPos, vWorldN, vColor;
-  varying vec2 vUv;
-  varying vec4 vEmit;
-  uniform vec3 uBacking;
-  uniform float uExposure;
+  varying vec3 vWorldPos, vWorldN, vColor; varying vec2 vUv; varying vec4 vEmit;
+  uniform vec3 uBacking; uniform float uExposure;
   void main() {
     vec3 V = normalize(cameraPosition - vWorldPos);
     float cosT = dot(vWorldN, V);
-    // Backside of the emitter: the dark shadow (panel backing / chip substrate). Still opaque.
-    if (cosT <= 0.0) { gl_FragColor = vec4(uBacking, 1.0); return; }
-    float lobe = pow(cosT, vEmit.x);                 // viewing-angle response
-    // the lit core (chip/lens) within the body, edge-diffused; the rest of the body is backing
-    float d = length(vUv - 0.5) * 2.0;               // 0 at centre .. 1 at the inscribed body edge
+    if (cosT <= 0.0) { gl_FragColor = vec4(uBacking, 1.0); return; }   // the dark backside
+    float lobe = pow(cosT, vEmit.x);
+    float d = length(vUv - 0.5) * 2.0;
     float core = vEmit.y, soft = max(vEmit.z, 0.02);
     float shape = 1.0 - smoothstep(core * (1.0 - soft), core * (1.0 + soft), d);
-    vec3 lit = vColor * lobe * shape * vEmit.w * uExposure;
-    gl_FragColor = vec4(uBacking + lit, 1.0);
+    gl_FragColor = vec4(uBacking + vColor * lobe * shape * vEmit.w * uExposure, 1.0);
   }`;
+const simMat = new THREE.ShaderMaterial({ vertexShader: SIM_VERT, fragmentShader: SIM_FRAG, uniforms: { uBacking: { value: new THREE.Color(0x0a0c14) }, uExposure: { value: 1.0 } }, side: THREE.DoubleSide });
 
-async function boot() {
-  const scene = await (await fetch("scene.json")).json();
-  const px = scene.pixels;
+// ── build / rebuild the scene objects from a scene JSON (in place: camera stays) ──
+function disposeSceneObjects() {
+  for (const o of [mesh, simMesh, normalsLines]) if (o) { scene3.remove(o); o.geometry.dispose(); }
+  for (const st of structures) scene3.remove(st.group);
+  structures.length = 0;
+  mesh = simMesh = normalsLines = null;
+}
+
+function buildSceneObjects(sc) {
+  disposeSceneObjects();
+  scene = sc;
+  const px = sc.pixels;
   N = px.length;
-  $("h-name").textContent = scene.name;
+  $("h-name").textContent = sc.name;
   $("h-count").textContent = N.toLocaleString();
-  $("h-inst").textContent = scene.meta?.instances?.length ?? 1;
-  const show = scene.meta?.show;
+  $("h-inst").textContent = sc.meta?.instances?.length ?? 1;
+  const show = sc.meta?.show;
   if (show?.scenes?.length >= 2) { $("xf-a").textContent = show.scenes[0]; $("xf-b").textContent = show.scenes[1]; }
-  if (show?.single) document.getElementById("xf").style.opacity = 0.35;
+  $("xf").style.opacity = show?.single ? 0.35 : 1;
 
-  // Bounds → LED size + camera framing.
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const p of px) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p.p[k]); hi[k] = Math.max(hi[k], p.p[k]); }
-  const size = [hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]];
-  const center = new THREE.Vector3((lo[0]+hi[0])/2, (lo[1]+hi[1])/2, (lo[2]+hi[2])/2);
-  const diag = Math.hypot(...size);
-  // Size each LED box off the real pixel PITCH (mm spacing), not the rig extent — otherwise
-  // adding/spacing instances inflates the boxes and they overlap. ~0.5·pitch reads as distinct
-  // dots with a gap. Fall back to a small fraction of the scene only if pitch is unknown.
-  const pitch = scene.meta?.pitchMM;
+  const size = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+  const center = new THREE.Vector3((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
+  const diag = Math.max(1, Math.hypot(...size));
+  const pitch = sc.meta?.pitchMM;
   const ledSize = pitch ? pitch * 0.5 : diag / 400;
 
-  // ── dots mode: plain boxes (the map) ──
-  const geo = new THREE.BoxGeometry(ledSize, ledSize, ledSize);
-  const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
-  mesh = new THREE.InstancedMesh(geo, mat, N);
-  const dummy = new THREE.Object3D();
-  for (let i = 0; i < N; i++) {
-    dummy.position.set(px[i].p[0], px[i].p[1], px[i].p[2]);
-    dummy.updateMatrix();
-    mesh.setMatrixAt(i, dummy.matrix);
-    mesh.setColorAt(i, OFF);
-  }
-  mesh.instanceMatrix.needsUpdate = true;
-  mesh.instanceColor.needsUpdate = true;
-  scene3.add(mesh);
-
-  // ── sim mode: oriented emissive bodies with a per-fixture emitter profile ──
-  const emitters = (scene.meta?.instances || []).map((it) => ({ ...EMIT_DEFAULT, ...(it.emitter || {}) }));
-  const emitOf = (i) => emitters[px[i].inst || 0] || EMIT_DEFAULT;
+  // instance transforms + fixture-local geometry (so the builder can move instances live)
+  instTf.length = 0;
+  for (const it of sc.meta?.instances || []) { const pos = it.pos || [0, 0, 0], rotDeg = it.rotDeg || [0, 0, 0]; instTf.push({ pos, rotDeg, R: eulerMatrix(rotDeg) }); }
+  if (!instTf.length) instTf.push({ pos: [0, 0, 0], rotDeg: [0, 0, 0], R: eulerMatrix([0, 0, 0]) });
+  localP = new Float32Array(N * 3); localN = new Float32Array(N * 3); bodySize = new Float32Array(N); instOf = new Int32Array(N);
+  const emitters = (sc.meta?.instances || []).map((it) => ({ ...EMIT_DEFAULT, ...(it.emitter || {}) }));
   const bodyBase = pitch ? pitch : (diag / 400) * 2;
-  const simGeo = new THREE.PlaneGeometry(1, 1);
   const aEmit = new Float32Array(N * 4);
-  const simMat = new THREE.ShaderMaterial({
-    vertexShader: SIM_VERT, fragmentShader: SIM_FRAG,
-    uniforms: { uBacking: { value: new THREE.Color(0x0a0c14) }, uExposure: { value: 1.0 } },
-    side: THREE.DoubleSide,
-  });
-  simMesh = new THREE.InstancedMesh(simGeo, simMat, N);
-  const q = new THREE.Quaternion(), zAxis = new THREE.Vector3(0, 0, 1), nv = new THREE.Vector3();
-  const body = new THREE.Object3D();
   let maxGlow = 0;
   for (let i = 0; i < N; i++) {
-    const e = emitOf(i), p = px[i].p, n = px[i].n;
-    nv.set(n[0], n[1], n[2]).normalize();
-    q.setFromUnitVectors(zAxis, nv);                   // local +Z → the emission normal
-    const s = bodyBase * e.sizeFrac;
-    body.position.set(p[0], p[1], p[2]); body.quaternion.copy(q); body.scale.set(s, s, 1);
-    body.updateMatrix();
-    simMesh.setMatrixAt(i, body.matrix);
-    simMesh.setColorAt(i, SIM_IDLE);
+    const k = px[i].inst || 0, tf = instTf[k] || instTf[0], e = emitters[k] || EMIT_DEFAULT;
+    instOf[i] = k;
+    const lp = matTVec(tf.R, [px[i].p[0] - tf.pos[0], px[i].p[1] - tf.pos[1], px[i].p[2] - tf.pos[2]]);
+    const ln = matTVec(tf.R, px[i].n);
+    localP.set(lp, i * 3); localN.set(ln, i * 3);
+    bodySize[i] = bodyBase * e.sizeFrac;
     aEmit.set([lobeP(e.viewingAngleDeg), e.coreFrac, e.softness, e.gain], i * 4);
     maxGlow = Math.max(maxGlow, e.glow);
   }
+
+  // dots mode: plain boxes (the map)
+  mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(ledSize, ledSize, ledSize), new THREE.MeshBasicMaterial({ toneMapped: false }), N);
+  // sim mode: oriented emissive bodies
+  const simGeo = new THREE.PlaneGeometry(1, 1);
   simGeo.setAttribute("aEmit", new THREE.InstancedBufferAttribute(aEmit, 4));
-  simMesh.instanceMatrix.needsUpdate = true;
-  simMesh.instanceColor.needsUpdate = true;
+  simMesh = new THREE.InstancedMesh(simGeo, simMat, N);
   simMesh.frustumCulled = false;
-  scene3.add(simMesh);
+  for (let i = 0; i < N; i++) { mesh.setColorAt(i, OFF); simMesh.setColorAt(i, SIM_IDLE); }
+  // normal quills
+  normalsLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x3a6ea5, transparent: true, opacity: 0.5 }));
+  normalsLines.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(N * 6), 3));
+  normalsLines.visible = qs.get("normals") === "1" || (normalsLines?.visible ?? false);
+  normalsLines.userData.qlen = ledSize * 3;
+  for (let k = 0; k < instTf.length; k++) placeInstance(k);
+  scene3.add(mesh, simMesh, normalsLines);
 
-  // bloom = the diffusion glow; strength tracks the strongest emitter's `glow`
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene3, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.9 * (maxGlow || 1), 0.45, 0.35);
-  bloomPass.enabled = bloomOn;
-  composer.addPass(bloomPass);
-  composer.addPass(new OutputPass());
-  applyMode();
-
-  // Normal quills (toggle with N) — the visual proof the emission directions are right.
-  const nGeo = new THREE.BufferGeometry();
-  const pos = new Float32Array(N * 6);
-  const qlen = ledSize * 3;
-  for (let i = 0; i < N; i++) {
-    const p = px[i].p, n = px[i].n;
-    pos.set([p[0], p[1], p[2], p[0]+n[0]*qlen, p[1]+n[1]*qlen, p[2]+n[2]*qlen], i * 6);
+  if (!composer) {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene3, camera));
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.9, 0.45, 0.35);
+    composer.addPass(bloomPass);
+    composer.addPass(new OutputPass());
   }
-  nGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  normalsLines = new THREE.LineSegments(nGeo, new THREE.LineBasicMaterial({ color: 0x3a6ea5, transparent: true, opacity: 0.5 }));
-  normalsLines.visible = false;
-  scene3.add(normalsLines);
+  bloomPass.strength = 0.9 * (maxGlow || 1);
 
-  // Ground grid at the scene's floor (min Y) so the pieces read as standing on the ground plane.
-  const gspan = Math.max(hi[0] - lo[0], hi[2] - lo[2]) * 1.6;
-  const gdiv = Math.max(6, Math.min(40, Math.round(gspan / 500)));
-  const ground = new THREE.GridHelper(gspan, gdiv, 0x33436b, 0x172036);
-  ground.position.set(center.x, lo[1], center.z);
-  scene3.add(ground);
-
-  // Default vantage: look from where the light GOES. Stand along the mean emission direction — the
-  // audience side of the lit faces (for a Möbius ribbon, its dominant side) — elevated 3/4 so the
-  // ground plane and depth read. Falls back to +Z for omni/balanced rigs. (The simulator made this
-  // matter: the old fixed +Z camera was looking at the heart's dark backside.)
-  const nbar = [0, 0, 0];
-  for (const p of px) { nbar[0] += p.n[0]; nbar[1] += p.n[1]; nbar[2] += p.n[2]; }
-  const horiz = Math.hypot(nbar[0], nbar[2]) > 0.05 * N ? [nbar[0], nbar[2]] : [0, 1]; // horizontal component, off the poles
-  const hl = Math.hypot(horiz[0], horiz[1]);
-  camera.up.set(0, 1, 0);
-  camera.position.set(center.x + (horiz[0] / hl) * diag * 1.15, center.y + diag * 0.4, center.z + (horiz[1] / hl) * diag * 1.15);
-  controls.target.copy(center);
-  controls.update();
-
-  // Reproducible vantages for screenshots / the render gate: ?az=<deg>&el=<deg> orbits the camera
-  // around the scene centre (az 0 = in front, 90 = from +X); ?normals=1 shows the quills.
-  const qs = new URLSearchParams(location.search);
-  if (qs.has("az") || qs.has("el")) {
-    const az = ((+qs.get("az") || 0) * Math.PI) / 180, el = ((+(qs.get("el") ?? 15)) * Math.PI) / 180, r = diag * 1.2;
-    camera.position.set(center.x + r * Math.cos(el) * Math.sin(az), center.y + r * Math.sin(el), center.z + r * Math.cos(el) * Math.cos(az));
+  if (!framed) {
+    // ground grid at the floor; default vantage from where the light GOES (mean emission direction)
+    const gspan = Math.max(hi[0] - lo[0], hi[2] - lo[2]) * 1.6;
+    const ground = new THREE.GridHelper(gspan, Math.max(6, Math.min(40, Math.round(gspan / 500))), 0x33436b, 0x172036);
+    ground.position.set(center.x, lo[1], center.z);
+    scene3.add(ground);
+    const nbar = [0, 0, 0];
+    for (const p of px) { nbar[0] += p.n[0]; nbar[1] += p.n[1]; nbar[2] += p.n[2]; }
+    const horiz = Math.hypot(nbar[0], nbar[2]) > 0.05 * N ? [nbar[0], nbar[2]] : [0, 1];
+    const hl = Math.hypot(horiz[0], horiz[1]);
+    camera.up.set(0, 1, 0);
+    camera.position.set(center.x + (horiz[0] / hl) * diag * 1.15, center.y + diag * 0.4, center.z + (horiz[1] / hl) * diag * 1.15);
+    if (qs.has("az") || qs.has("el")) {
+      const az = ((+qs.get("az") || 0) * D2R), el = ((+(qs.get("el") ?? 15)) * D2R), r = diag * 1.2;
+      camera.position.set(center.x + r * Math.cos(el) * Math.sin(az), center.y + r * Math.sin(el), center.z + r * Math.cos(el) * Math.cos(az));
+    }
+    controls.target.copy(center);
     controls.update();
+    framed = true;
   }
-  if (qs.get("normals") === "1") normalsLines.visible = true;
+  applyMode();
+  loadStructures(sc);
+}
 
-  connectBus();
-  console.log("VOXELED_READY", N); // headless render gate looks for this
-  console.log("VOXELED_SIM_READY", emitters.length, "emitter profile(s)"); // …and for the simulator
-  loadStructures(scene); // async; logs VOXELED_STRUCTURES_READY when the CAD is in
+// Recompute every pixel of instance k from its fixture-local geometry + the instance transform.
+const _dummy = new THREE.Object3D(), _q = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1), _nv = new THREE.Vector3();
+function placeInstance(k) {
+  const tf = instTf[k];
+  const qpos = normalsLines.geometry.attributes.position.array, qlen = normalsLines.userData.qlen;
+  for (let i = 0; i < N; i++) {
+    if (instOf[i] !== k) continue;
+    const p = matVec(tf.R, [localP[i * 3], localP[i * 3 + 1], localP[i * 3 + 2]]);
+    p[0] += tf.pos[0]; p[1] += tf.pos[1]; p[2] += tf.pos[2];
+    const n = matVec(tf.R, [localN[i * 3], localN[i * 3 + 1], localN[i * 3 + 2]]);
+    _dummy.position.set(p[0], p[1], p[2]); _dummy.quaternion.identity(); _dummy.scale.set(1, 1, 1); _dummy.updateMatrix();
+    mesh.setMatrixAt(i, _dummy.matrix);
+    _nv.set(n[0], n[1], n[2]).normalize(); _q.setFromUnitVectors(_z, _nv);
+    _dummy.quaternion.copy(_q); _dummy.scale.set(bodySize[i], bodySize[i], 1); _dummy.updateMatrix();
+    simMesh.setMatrixAt(i, _dummy.matrix);
+    qpos.set([p[0], p[1], p[2], p[0] + n[0] * qlen, p[1] + n[1] * qlen, p[2] + n[2] * qlen], i * 6);
+  }
+  mesh.instanceMatrix.needsUpdate = true; simMesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true; simMesh.instanceColor.needsUpdate = true;
+  normalsLines.geometry.attributes.position.needsUpdate = true;
+  for (const st of structures) if (st.inst === k) { st.group.position.set(...tf.pos); st.group.rotation.set(tf.rotDeg[0] * D2R, tf.rotDeg[1] * D2R, tf.rotDeg[2] * D2R, "ZYX"); }
+}
+
+// ── structures: the sculpture's own CAD around the LEDs ──────────────────────────
+// Model mode (M): translucent context · OPAQUE (see what the armature blocks from any vantage) ·
+// hidden. In the simulator the body is always an opaque, depth-writing occluder.
+async function loadStructures(sc) {
+  const list = sc.meta?.structures || [];
+  const stl = new STLLoader(), obj = new OBJLoader(), gltf = new GLTFLoader();
+  await Promise.all(list.map(async (s) => {
+    try {
+      const res = await fetch(s.url);
+      if (!res.ok) throw new Error(`${res.status} ${s.url}`);
+      let object;
+      if (s.format === "stl") { const g = stl.parse(await res.arrayBuffer()); g.computeVertexNormals(); object = new THREE.Mesh(g); }
+      else if (s.format === "obj") object = obj.parse(await res.text());
+      else { const buf = await res.arrayBuffer(); object = await new Promise((ok, err) => gltf.parse(buf, "", (g) => ok(g.scene), err)); }
+      const mats = {
+        glass: new THREE.MeshStandardMaterial({ color: new THREE.Color(s.color), transparent: true, opacity: s.opacity, depthWrite: false, side: THREE.DoubleSide, roughness: 0.8, metalness: 0.2 }),
+        solid: new THREE.MeshStandardMaterial({ color: new THREE.Color(s.color), side: THREE.DoubleSide, roughness: 0.75, metalness: 0.25 }),
+        sim: new THREE.MeshStandardMaterial({ color: 0x171a24, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide }),
+      };
+      const meshes = [];
+      object.traverse((o) => { if (o.isMesh) { o.material = mats.glass; meshes.push(o); } });
+      const inner = new THREE.Group();
+      inner.add(object);
+      inner.scale.setScalar(s.scaleToMM);
+      inner.rotation.set(s.rotDeg[0] * D2R, s.rotDeg[1] * D2R, s.rotDeg[2] * D2R, "ZYX");
+      inner.position.set(s.pos[0], s.pos[1], s.pos[2]);
+      const outer = new THREE.Group();
+      outer.add(inner);
+      if (s.parent) { outer.rotation.set(s.parent.rotDeg[0] * D2R, s.parent.rotDeg[1] * D2R, s.parent.rotDeg[2] * D2R, "ZYX"); outer.position.set(s.parent.pos[0], s.parent.pos[1], s.parent.pos[2]); }
+      scene3.add(outer);
+      structures.push({ group: outer, meshes, mats, name: s.name, inst: s.inst ?? null });
+    } catch (e) { console.warn("VOXELED_STRUCTURE_FAILED", s.name, e); }
+  }));
+  console.log("VOXELED_STRUCTURES_READY", structures.length, "of", list.length);
+  applyMode();
 }
 
 function applyMode() {
   if (mesh) mesh.visible = !simOn;
   if (simMesh) simMesh.visible = simOn;
-  for (const st of structures) { st.group.visible = structuresOn; for (const m of st.meshes) m.material = simOn ? st.mats.sim : st.mats.dots; }
   const el = $("h-mode");
   el.textContent = simOn ? (bloomOn ? "sim + bloom" : "sim") : "dots";
   el.classList.toggle("sim", simOn);
   if (bloomPass) bloomPass.enabled = bloomOn;
+  for (const st of structures) { st.group.visible = modelMode !== 2; for (const m of st.meshes) m.material = simOn ? st.mats.sim : modelMode === 1 ? st.mats.solid : st.mats.glass; }
+  const n = scene?.meta?.structures?.length || 0;
+  $("h-model").textContent = n ? `${structures.length}/${n} · ${["translucent", "opaque", "hidden"][modelMode]}` : "—";
+}
+
+// ── boot + live reload ─────────────────────────────────────────────────────────
+async function loadScene() { return (await fetch("scene.json")).json(); }
+async function boot() {
+  buildSceneObjects(await loadScene());
+  connectBus();
+  console.log("VOXELED_READY", N);
+  console.log("VOXELED_SIM_READY", scene.meta?.instances?.length ?? 1, "emitter profile(s)");
+  if (qs.get("build") === "1") await toggleBuilder(true);
+  if (qs.has("select")) select(+qs.get("select"));
+}
+async function reloadScene() {
+  const keep = selected != null ? scene.meta.instances[selected]?.name : null;
+  buildSceneObjects(await loadScene());
+  if (buildOn) await refreshLayout();
+  if (keep != null) { const k = scene.meta.instances.findIndex((i) => i.name === keep); if (k >= 0) select(k); else deselect(); }
 }
 
 // ── the normalized pixel bus ──────────────────────────────────────────────────
 const tmp = new THREE.Color();
 let frameCount = 0, lastFpsT = performance.now();
-
 function connectBus() {
   const ws = new WebSocket(`ws://${location.host}/bus`);
   ws.binaryType = "arraybuffer";
   ws.onopen = () => { $("h-dot").classList.add("live"); $("h-bus").lastChild.textContent = "live"; };
   ws.onclose = () => { $("h-dot").classList.remove("live"); $("h-bus").lastChild.textContent = "closed"; setTimeout(connectBus, 1000); };
   ws.onmessage = (ev) => {
+    if (typeof ev.data === "string") { // control message from the hub
+      try { const m = JSON.parse(ev.data); if (m.type === "scene") reloadScene(); } catch {}
+      return;
+    }
     if (!mesh) return;
     const d = new Uint8Array(ev.data);
     const n = Math.min(N, (d.length / 3) | 0);
-    for (let i = 0; i < n; i++) {
-      tmp.setRGB(d[i*3]/255, d[i*3+1]/255, d[i*3+2]/255);
-      mesh.setColorAt(i, tmp);
-      simMesh?.setColorAt(i, tmp);
-    }
-    mesh.instanceColor.needsUpdate = true;
-    if (simMesh) simMesh.instanceColor.needsUpdate = true;
+    for (let i = 0; i < n; i++) { tmp.setRGB(d[i * 3] / 255, d[i * 3 + 1] / 255, d[i * 3 + 2] / 255); mesh.setColorAt(i, tmp); simMesh.setColorAt(i, tmp); }
+    mesh.instanceColor.needsUpdate = true; simMesh.instanceColor.needsUpdate = true;
     frameCount++;
   };
 }
@@ -373,29 +404,173 @@ function connectBus() {
 // ── crossfade control → hub /control ─────────────────────────────────────────
 const slider = $("xf-slider"), autoBtn = $("xf-auto");
 let lastSend = 0, pendingT = null;
-function sendControl(qs) {
+function sendControl(q) {
   const now = performance.now();
-  if (now - lastSend < 60) { clearTimeout(pendingT); pendingT = setTimeout(() => sendControl(qs), 60); return; }
+  if (now - lastSend < 60) { clearTimeout(pendingT); pendingT = setTimeout(() => sendControl(q), 60); return; }
   lastSend = now;
-  fetch("/control?" + qs).catch(() => {});
+  fetch("/control?" + q).catch(() => {});
 }
-function goManual() {
-  autoBtn.classList.remove("on");
-  sendControl(`mode=manual&a=0&b=1&fader=${slider.value}`);
-}
+function goManual() { autoBtn.classList.remove("on"); sendControl(`mode=manual&a=0&b=1&fader=${slider.value}`); }
 slider.addEventListener("input", goManual);
-autoBtn.addEventListener("click", () => {
-  const on = !autoBtn.classList.contains("on");
-  autoBtn.classList.toggle("on", on);
-  if (on) sendControl("mode=auto"); else goManual();
+autoBtn.addEventListener("click", () => { const on = !autoBtn.classList.contains("on"); autoBtn.classList.toggle("on", on); if (on) sendControl("mode=auto"); else goManual(); });
+
+// ── builder ────────────────────────────────────────────────────────────────────
+// Edits the same layout file the hub loaded: GET /layout gives the doc + expanded instances (with
+// `src` → which layout entry each came from); every edit POSTs the doc back (applied live, the hub
+// rebroadcasts the scene, we rebuild in place); Save writes the YAML.
+let buildOn = false, selected = null, layout = null, dirty = false;
+const gizmo = new TransformControls(camera, renderer.domElement);
+const proxy = new THREE.Object3D();
+proxy.rotation.order = "ZYX";
+scene3.add(proxy, gizmo);
+gizmo.visible = false; gizmo.enabled = false;
+gizmo.setTranslationSnap(10); gizmo.setRotationSnap(5 * D2R);
+const boxHelper = new THREE.Box3Helper(new THREE.Box3(), 0xff5e87);
+boxHelper.visible = false;
+scene3.add(boxHelper);
+const raycaster = new THREE.Raycaster();
+
+async function refreshLayout() {
+  layout = await (await fetch("/layout")).json();
+  const sel = $("b-fixture");
+  sel.innerHTML = "";
+  for (const k of Object.keys(layout.doc?.fixtures || {})) { const o = document.createElement("option"); o.value = k; o.textContent = k; sel.appendChild(o); }
+}
+async function toggleBuilder(on) {
+  buildOn = on;
+  $("build").hidden = !on;
+  if (on) { await refreshLayout(); console.log("VOXELED_BUILDER_READY", layout?.instances?.length ?? 0); } else deselect();
+}
+function entryOf(k) { const src = scene.meta.instances[k]?.src; return src ? { entry: layout.doc.instances[src.i], src } : null; }
+function status(msg, isDirty) { dirty = isDirty ?? dirty; const s = $("b-status"); s.textContent = msg; s.classList.toggle("dirty", dirty); }
+
+function select(k) {
+  if (!scene?.meta?.instances?.[k]) return;
+  selected = k;
+  const inst = scene.meta.instances[k], tf = instTf[k];
+  const e = entryOf(k);
+  const generated = e && (e.entry.array || e.entry.ring);
+  $("b-sel").textContent = `${inst.name}  ·  ${inst.fixture}`;
+  $("b-sub").textContent = generated ? `element ${e.src.k} of a generated ${e.entry.array ? "array" : "ring"} — moving it moves the whole ${e.entry.array ? "array" : "ring"}` : `layout entry #${e?.src?.i ?? "?"}`;
+  fillFields(tf);
+  proxy.position.set(...tf.pos);
+  proxy.rotation.set(tf.rotDeg[0] * D2R, tf.rotDeg[1] * D2R, tf.rotDeg[2] * D2R, "ZYX");
+  gizmo.attach(proxy); gizmo.visible = true; gizmo.enabled = true;
+  $("b-rot").disabled = !!generated;
+  if (generated && gizmo.mode === "rotate") setGizmoMode("translate");
+  updateBox();
+  boxHelper.visible = true;
+}
+function deselect() { selected = null; gizmo.detach(); gizmo.visible = false; gizmo.enabled = false; boxHelper.visible = false; $("b-sel").textContent = "click an instance to select it"; $("b-sub").textContent = ""; }
+function fillFields(tf) { ["px", "py", "pz"].forEach((id, i) => ($("b-" + id).value = Math.round(tf.pos[i]))); ["rx", "ry", "rz"].forEach((id, i) => ($("b-" + id).value = +tf.rotDeg[i].toFixed(1))); }
+function updateBox() {
+  if (selected == null) return;
+  const b = boxHelper.box.makeEmpty(); const v = new THREE.Vector3(), m = new THREE.Matrix4();
+  for (let i = 0; i < N; i++) if (instOf[i] === selected) { mesh.getMatrixAt(i, m); v.setFromMatrixPosition(m); b.expandByPoint(v); }
+  b.expandByScalar((scene.meta?.pitchMM || 20) * 2);
+}
+function setGizmoMode(mode) { gizmo.setMode(mode); $("b-move").classList.toggle("on", mode === "translate"); $("b-rot").classList.toggle("on", mode === "rotate"); }
+
+// live: move the selected instance's pixels/structures as the gizmo or fields change
+function liveTransform(pos, rotDeg) {
+  const tf = instTf[selected];
+  tf.pos = pos; tf.rotDeg = rotDeg; tf.R = eulerMatrix(rotDeg);
+  placeInstance(selected);
+  updateBox();
+}
+gizmo.addEventListener("dragging-changed", (e) => { controls.enabled = !e.value; if (!e.value && selected != null) commitTransform(); });
+gizmo.addEventListener("objectChange", () => {
+  if (selected == null) return;
+  const pos = [proxy.position.x, proxy.position.y, proxy.position.z];
+  const rot = [proxy.rotation.x / D2R, proxy.rotation.y / D2R, proxy.rotation.z / D2R];
+  liveTransform(pos, rot); fillFields(instTf[selected]);
+});
+for (const id of ["px", "py", "pz", "rx", "ry", "rz"]) $("b-" + id).addEventListener("change", () => {
+  if (selected == null) return;
+  const pos = [+$("b-px").value, +$("b-py").value, +$("b-pz").value], rot = [+$("b-rx").value, +$("b-ry").value, +$("b-rz").value];
+  liveTransform(pos, rot); proxy.position.set(...pos); proxy.rotation.set(rot[0] * D2R, rot[1] * D2R, rot[2] * D2R, "ZYX");
+  commitTransform();
+});
+
+// write the selected instance's transform into its layout entry and apply it on the hub
+async function commitTransform() {
+  const e = entryOf(selected); if (!e) return;
+  const tf = instTf[selected], inst = scene.meta.instances[selected];
+  const r1 = (x) => Math.round(x * 10) / 10;
+  if (e.entry.array || e.entry.ring) { // a generated element: move the generator's origin by the same delta
+    const base = e.entry.pos || [0, 0, 0];
+    e.entry.pos = [0, 1, 2].map((i) => Math.round(base[i] + (tf.pos[i] - inst.pos[i])));
+  } else {
+    e.entry.pos = tf.pos.map((x) => Math.round(x));
+    e.entry.rotDeg = tf.rotDeg.map(r1);
+    if (e.entry.rotDeg.every((x) => x === 0)) delete e.entry.rotDeg;
+  }
+  await postLayout(false);
+}
+async function postLayout(write) {
+  try {
+    const r = await (await fetch(`/layout${write ? "?write=1" : ""}`, { method: "POST", body: JSON.stringify(layout.doc) })).json();
+    if (r.error) { status(`✗ ${r.error}`, true); return false; }
+    status(write ? `saved ${layout.path.split("/").pop()} · ${r.instances} instance(s)` : `applied live · ${r.instances} instance(s) — unsaved`, !write);
+    return true;
+  } catch (e) { status(`✗ ${e.message}`, true); return false; }
+}
+
+$("b-move").addEventListener("click", () => setGizmoMode("translate"));
+$("b-rot").addEventListener("click", () => setGizmoMode("rotate"));
+$("b-dup").addEventListener("click", async () => {
+  const e = entryOf(selected); if (!e) return;
+  const copy = JSON.parse(JSON.stringify(e.entry));
+  copy.name = `${copy.name || copy.fixture}-copy`;
+  copy.pos = [(copy.pos?.[0] || 0) + Math.round(boxHelper.box.max.x - boxHelper.box.min.x || 500), copy.pos?.[1] || 0, copy.pos?.[2] || 0];
+  layout.doc.instances.splice(e.src.i + 1, 0, copy);
+  await postLayout(false);
+});
+$("b-del").addEventListener("click", async () => {
+  const e = entryOf(selected); if (!e) return;
+  if (layout.doc.instances.length <= 1) { status("✗ a layout needs at least one instance", true); return; }
+  layout.doc.instances.splice(e.src.i, 1);
+  deselect();
+  await postLayout(false);
+});
+$("b-array").addEventListener("click", async () => {
+  const e = entryOf(selected); if (!e) return;
+  const count = ["cx", "cy", "cz"].map((id) => Math.max(1, +$("b-" + id).value | 0)), spacing = ["sx", "sy", "sz"].map((id) => +$("b-" + id).value || 0);
+  delete e.entry.ring;
+  e.entry.array = { count, spacing, center: !!e.entry.array?.center };
+  await postLayout(false);
+});
+$("b-add").addEventListener("click", async () => {
+  const fx = $("b-fixture").value; if (!fx) return;
+  layout.doc.instances.push({ fixture: fx, name: `${fx}-${layout.doc.instances.length + 1}`, pos: [0, 0, 0] });
+  await postLayout(false);
+});
+$("b-save").addEventListener("click", () => postLayout(true));
+
+// click = select (a real click, not an orbit drag)
+let downAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!buildOn || !downAt || gizmo.dragging) return;
+  if (Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
+  const ndc = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hit = raycaster.intersectObject(simOn ? simMesh : mesh, false)[0];
+  if (hit && hit.instanceId != null) select(instOf[hit.instanceId]); else deselect();
 });
 
 addEventListener("keydown", (e) => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
   const k = e.key.toLowerCase();
   if (k === "n" && normalsLines) normalsLines.visible = !normalsLines.visible;
   else if (k === "s") { simOn = !simOn; applyMode(); }
   else if (k === "b") { bloomOn = !bloomOn; applyMode(); }
-  else if (k === "m") { structuresOn = !structuresOn; applyMode(); }
+  else if (k === "m") { modelMode = (modelMode + 1) % 3; applyMode(); }
+  else if (k === "e") toggleBuilder(!buildOn);
+  else if (buildOn && k === "t") setGizmoMode("translate");
+  else if (buildOn && k === "r" && !$("b-rot").disabled) setGizmoMode("rotate");
+  else if (buildOn && k === "escape") deselect();
+  else if (buildOn && (k === "delete" || k === "backspace") && selected != null) $("b-del").click();
   else if (k === "[") { slider.value = Math.max(0, +slider.value - 0.05); goManual(); }
   else if (k === "]") { slider.value = Math.min(1, +slider.value + 0.05); goManual(); }
   else if (k === "a") autoBtn.click();
@@ -405,10 +580,7 @@ function loop() {
   requestAnimationFrame(loop);
   controls.update();
   const now = performance.now();
-  if (now - lastFpsT > 500) {
-    $("h-fps").textContent = Math.round((frameCount * 1000) / (now - lastFpsT));
-    frameCount = 0; lastFpsT = now;
-  }
+  if (now - lastFpsT > 500) { $("h-fps").textContent = Math.round((frameCount * 1000) / (now - lastFpsT)); frameCount = 0; lastFpsT = now; }
   if (simOn && composer) composer.render(); else renderer.render(scene3, camera);
 }
 loop();

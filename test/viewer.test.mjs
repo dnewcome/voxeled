@@ -51,7 +51,7 @@ const r = spawnSync(chrome, [
   "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
   "--window-size=1280,800", "--virtual-time-budget=8000",
   "--enable-logging=stderr", "--v=1", `--screenshot=${shot}`,
-  `http://localhost:${port}/?sim=1`, // boot into the simulator so its shader + bloom composer actually render
+  `http://localhost:${port}/?sim=1&build=1&select=0`, // simulator + builder (with the first instance selected) so both render
 ], { encoding: "utf8", timeout: 40000 });
 
 const out = (r.stdout || "") + (r.stderr || "");
@@ -63,6 +63,7 @@ ok(!/Shader Error|WebGLProgram: Shader|THREE\.WebGLShader/.test(out), "sim shade
 const sm = out.match(/VOXELED_STRUCTURES_READY (\d+) of (\d+)/);
 ok(sm && sm[1] === sm[2] && +sm[2] >= 1, `structure meshes (the heart's steel) all loaded in the viewer (${sm ? `${sm[1]}/${sm[2]}` : "no signal"})`);
 ok(!out.includes("VOXELED_STRUCTURE_FAILED"), "no structure failed to load");
+ok(/VOXELED_BUILDER_READY [1-9]/.test(out), "builder mode booted (fetched /layout, gizmo + panel up)");
 ok(existsSync(shot), `screenshot saved → ${path.relative(ROOT, shot)}`);
 
 console.log(`viewer: ${pass} passed, ${fail} failed`);

@@ -120,6 +120,29 @@ LED, a diffused strip, and a glowing rope are the same body with different `view
 `color × lobe(view angle) × core`, its back is dark backing, and both write depth, so the bodies
 occlude one another (a panel ribbon's quads *are* the ribbon, dark on the back).
 
+## Placement generators — arrays, rings
+
+One `instances:` entry can stand for many. Generators expand into plain instances at load time, so
+everything downstream (emitters, patch, structures, the simulator) is unchanged; each expanded
+instance carries `src: { i, k }` (layout entry, element) so the builder can edit the source.
+
+```yaml
+instances:
+  - { fixture: heart, name: solo, pos: [0, 0, 0], rotDeg: [0, 30, 0] }             # explicit
+  - fixture: panel                                                               # a MATRIX
+    name: wall
+    pos: [0, 0, 0]
+    rotDeg: [0, 90, 0]                       # the matrix lives in the entry's frame
+    array: { count: [4, 3, 1], spacing: [600, 600, 0], center: true }
+    each: { emitter: { viewingAngleDeg: 100 } }   # applied to every element
+  - fixture: heart                                                               # a RING (around Y)
+    ring: { count: 8, radiusMM: 2500, startDeg: 0, facing: center }             # facing: center|out|tangent|none
+```
+
+Elements are named `<name>-<x>-<y>[-<z>]` (arrays) / `<name>-<k>` (rings). In the builder,
+**make array** writes an `array:` onto the selected entry; moving a generated element moves the
+generator's origin.
+
 ## Structures — the sculpture itself around the LEDs
 
 The map says where the LEDs are; a **structure** is the *rest* of the piece — the steel ribbon, the
