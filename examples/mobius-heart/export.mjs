@@ -20,7 +20,7 @@ const ROOT = path.resolve(HERE, "../..");
 
 const layoutPath = path.resolve(process.argv[2] || path.join(HERE, "layouts/two-hearts.yaml"));
 const doc = parseYAML(readFileSync(layoutPath, "utf8"));
-const { scene, show } = resolveLayout(doc, { fixtures: FIXTURES, patterns: PATTERNS });
+const { scene, show } = resolveLayout(doc, { fixtures: FIXTURES, patterns: PATTERNS, baseDir: path.dirname(layoutPath) });
 
 // Snapshot the first scene at t=0 to bake as vertex colours.
 const scenes = show?.scenes?.length ? show.scenes : [{ name: "chase", render: PATTERNS.ribbonChase() }];

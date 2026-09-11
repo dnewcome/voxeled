@@ -106,6 +106,18 @@
   <div class="btns"><label style="font-size:11px;color:var(--dim)"><input type="checkbox" id="b-scope" /> apply emitter/output to every <b id="b-scope-fx">fixture</b> instance (fixture default), not just this one</label></div>
   <div class="lab">add an instance</div>
   <div class="btns"><select id="b-fixture"></select><button id="b-add">＋ add</button></div>
+  <div class="lab" title="define a fixture from a file (paths are relative to the layout file) and place one">new fixture from a file</div>
+  <div class="g3">
+    <input id="b-nf-name" placeholder="name" title="fixture name" />
+    <select id="b-nf-type" title="mesh: CAD export with LED chips as bodies (STL/OBJ/GLB) · vxl: a baked .vxl.json (Blender / Grasshopper / vox import) · gltf: glTF points"><option value="mesh">mesh (CAD chips)</option><option value="vxl">vxl (baked)</option><option value="gltf">gltf</option></select>
+    <input id="b-nf-scale" type="number" step="any" placeholder="mm/unit" title="scaleToMM: mesh/vxl units → mm (STL in metres: 1000; glTF is metres and defaults to 1000)" />
+  </div>
+  <div class="g3" style="grid-template-columns: 2fr 2fr 1fr">
+    <input id="b-nf-file" placeholder="LED file, e.g. ../../../thread-3d/model-cleaned.stl" title="the LED source file" />
+    <input id="b-nf-struct" placeholder="structure file (optional), e.g. …/thread-structure.glb" title="the sculpture's own CAD, drawn around the LEDs (STL/GLB/OBJ)" />
+    <input id="b-nf-sscale" type="number" step="any" placeholder="mm/unit" title="structure scaleToMM (glTF defaults to 1000)" />
+  </div>
+  <div class="btns"><button id="b-nf-add">＋ create fixture &amp; add one</button></div>
   <div class="btns"><button id="b-save" style="flex:2">💾 save layout</button></div>
   <div id="b-status"></div>
 </div>
@@ -627,6 +639,21 @@ $("b-add").addEventListener("click", async () => {
   const fx = $("b-fixture").value; if (!fx) return;
   layout.doc.instances.push({ fixture: fx, name: `${fx}-${layout.doc.instances.length + 1}`, pos: [0, 0, 0] });
   await postLayout(false);
+});
+$("b-nf-add").addEventListener("click", async () => {
+  if (!layout) return;
+  const name = $("b-nf-name").value.trim().replace(/[^\w.-]+/g, "-"), type = $("b-nf-type").value, file = $("b-nf-file").value.trim();
+  if (!name || !file) { status("✗ a new fixture needs a name and an LED file", true); return; }
+  const scale = +$("b-nf-scale").value, sfile = $("b-nf-struct").value.trim(), sscale = +$("b-nf-sscale").value;
+  const params = { file };
+  if (scale > 0) params.scaleToMM = scale;
+  const def = { type, params };
+  if (sfile) def.structures = [{ file: sfile, ...(sscale > 0 ? { scaleToMM: sscale } : {}) }];
+  (layout.doc.fixtures ||= {})[name] = def;
+  (layout.doc.instances ||= []).push({ fixture: name, name: `${name}-1`, pos: [0, 0, 0] });
+  status(`importing ${file}…`, true);
+  const okp = await postLayout(false);
+  if (!okp) { delete layout.doc.fixtures[name]; layout.doc.instances.pop(); } // hub rejected it: roll back
 });
 $("b-save").addEventListener("click", () => postLayout(true));
 

@@ -121,7 +121,7 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
     if (!def) throw new Error(`layout references undefined fixture "${fixtureName}"`);
     const make = fixtures[def.type];
     if (!make) throw new Error(`unknown fixture type "${def.type}" (registered: ${Object.keys(fixtures).join(", ") || "none"})`);
-    return (cache[fixtureName] = make({ ...(def.params || {}), paths }));
+    return (cache[fixtureName] = make({ ...(def.params || {}), paths, baseDir })); // file params resolve relative to the layout
   };
 
   const instances = expandInstances(doc.instances || [], { paths }).map((inst, k) => {

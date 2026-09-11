@@ -142,12 +142,20 @@ instances:
   - { fixture: heart, along: { path: edge, count: 4, orient: tangent } }   # instances spaced ALONG a path
 ```
 
-`rope` params: `path` (name or points), `count` **or** `pitchMM`, `radiusMM`, `angleDeg` (0 = on
-top of the tube: N₀ is *up* projected ⟂ the tangent, as in `place_leds.py`), `twistDegPerM`,
-`startMM`/`endMM`. Ropes default to a diffused emitter (170°, soft). The **`along:`** generator
-spaces instances along a path with their +Z following the tangent (`orient: none` keeps the
-entry's `rotDeg`). Example: `layouts/ropes.yaml` — three ropes at 60°/180°/300° on one S-curved
-tube.
+`rope` params: `path` (name or points), `count` **or** `pitchMM`, `radiusMM`, `angleDeg` — one
+angle, or a **list** for several ropes on the same tube (each its own `strand`) — `angleFrom` (a
+path: angle 0 points *toward* it — Thread measures rope angles from the inboard direction, tube →
+spine; without it angle 0 = `up` projected ⟂ the tangent, as in `place_leds.py`), `twistDegPerM`,
+`startMM`/`endMM`, `up`. Ropes default to a diffused emitter (170°, soft). The **`along:`**
+generator spaces instances along a path with their +Z following the tangent (`orient: none` keeps
+the entry's `rotDeg`). Example: `layouts/ropes.yaml` — three ropes at 60°/180°/300° on one
+S-curved tube.
+
+A piece's layout belongs in the piece's own repo next to its model (Thread: `thread-3d/voxeled/
+thread.yaml` — 3 tubes + spine from `tubes.json`/`align.json`, three ropes each, 7,200 LEDs, the
+steel GLB; rope-derived positions land within a median 6 mm of the as-designed `leds_v2` map).
+File params (`file:` in `mesh` / `vxl` / `gltf` fixtures, paths, structures) resolve **relative to
+the layout file**.
 
 ## Placement generators — arrays, rings
 

@@ -23,10 +23,10 @@ export const FIXTURES = {
   "mobius-heart": (params) => withEmitter(sampleHeart(params), PANEL_LED),
   // Import any glTF/GLB as a fixture: LED points + normals from the file (Blender, etc.).
   //   { type: gltf, params: { file: path/to.glb } }   (path resolved from the working dir)
-  gltf: (params) => withEmitter(gltfToFixture(readFileSync(path.resolve(params.file)), params), BARE_LED),
+  gltf: (params) => withEmitter(gltfToFixture(readFileSync(path.resolve(params.baseDir || ".", params.file)), params), BARE_LED),
   // Mechanical CAD export (STL/OBJ/GLB) with each LED chip as its own body → chip-island import.
   //   { type: mesh, params: { file: model.stl, scaleToMM: 1, normalSign: outward, order: chain, maxTris: 40 } }
-  mesh: (params) => withEmitter(meshToFixture(readFileSync(path.resolve(params.file)), { ...params, file: params.file }), params.emitter || BARE_LED),
+  mesh: (params) => withEmitter(meshToFixture(readFileSync(path.resolve(params.baseDir || ".", params.file)), { ...params, file: params.file }), params.emitter || BARE_LED),
   // LEDs along a path (a diffused rope on a tube, a strip along an edge): see src/fixtures/rope.mjs.
   //   { type: rope, params: { path: tube-1, count: 600, pitchMM: 152, radiusMM: 26, angleDeg: 60 } }
   rope: (params) => ropeFixture(params),
@@ -34,7 +34,7 @@ export const FIXTURES = {
   // or a scene from `vox import`. Must carry normals (`vox check` enforces it).
   //   { type: vxl, params: { file: piece.vxl.json } }
   vxl: (params) => {
-    const fx = JSON.parse(readFileSync(path.resolve(params.file), "utf8"));
+    const fx = JSON.parse(readFileSync(path.resolve(params.baseDir || ".", params.file), "utf8"));
     if (!Array.isArray(fx.pixels) || !fx.pixels.length) throw new Error(`${params.file}: no pixels`);
     if (fx.pixels.some((p) => !p.n)) throw new Error(`${params.file}: pixels without emission normals — run vox check`);
     return withEmitter({ pixels: fx.pixels, meta: { ...(fx.meta || {}), instances: undefined, structures: undefined } }, params.emitter || fx.meta?.emitter || BARE_LED);

@@ -53,6 +53,11 @@ format. Press **E**:
   and **output** (protocol, host, port, universe/offset, channel, byte order — the patch the hub
   drives) for the selected instance; tick *apply to every … instance* to write them to the fixture
   definition instead, so all its instances inherit.
+- **new fixture from a file** — define a fixture right here and place one: a name, a type
+  (`mesh` = a CAD export with the LED chips as bodies, `vxl` = a baked `.vxl.json` from the Blender
+  addon / Grasshopper / `vox import`, `gltf`), the LED file, its unit scale, and optionally the
+  sculpture's own CAD as a structure. Paths are relative to the layout file. This is how you drop
+  another piece into an installation — e.g. Thread exported as `build/thread.vxl.json`.
 - **▦ make array** turns the selected entry into a **matrix** — count x·y·z × spacing — expanded by
   the hub into named instances (`heart-2-0-1`…). Moving one element moves the whole array.
   (`grid-3x3.yaml` is now a single `array:` line.) Rings and paths are the same idea in YAML —

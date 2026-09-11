@@ -42,6 +42,15 @@ ok(rope.pixels[0].s === 0 && rope.pixels[4].s === 1 && rope.meta.emitter.viewing
 const pitched = ropeFixture({ path: straight, pitchMM: 250, radiusMM: 0 });
 ok(pitched.pixels.length === 5 && pitched.meta.pitchMM === 250, "pitchMM sets the LED spacing and the fixture's pitch");
 
+// ── several ropes on one tube; angle measured toward a reference path (Thread's inboard rule) ──
+const multi = ropeFixture({ path: straight, count: 4, radiusMM: 10, angleDeg: [0, 120, 240] });
+ok(multi.pixels.length === 12 && multi.meta.strands === 3 && multi.pixels[4].strand === 1 && multi.pixels[4].s === 0 && multi.pixels[7].s === 1, "angleDeg list → 3 strands of 4 on one tube, each with its own s 0→1");
+const spine = [[0, 500, 0], [1000, 500, 0]]; // a reference path 500 mm above the tube
+const inboard = ropeFixture({ path: straight, count: 3, radiusMM: 10, angleDeg: 0, angleFrom: spine });
+ok(eqArr(inboard.pixels[1].p, [500, 10, 0], 1e-3) && eqArr(inboard.pixels[1].n, [0, 1, 0], 1e-3), "angleFrom: angle 0 points toward the reference path (+Y here), regardless of `up`");
+const inboardSide = ropeFixture({ path: straight, count: 3, radiusMM: 10, angleDeg: 0, angleFrom: [[0, 0, 500], [1000, 0, 500]], up: [0, 1, 0] });
+ok(eqArr(inboardSide.pixels[1].p, [500, 0, 10], 1e-3), "…a reference to the side (+Z) turns the whole rope frame with it");
+
 // ── along: instances spaced along a path, +Z following the tangent ────────────
 const along = expandInstances([{ fixture: "heart", name: "h", along: { path: straight, count: 3 } }]);
 ok(along.length === 3 && eqArr(along[1].pos, [500, 0, 0]) && along[1].rotDeg[1] === 90, "along: 3 instances on the line, yawed 90° so +Z follows +X");

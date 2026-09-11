@@ -88,19 +88,29 @@ ok(scene.meta.instances[2].output.protocol === "ddp" && scene.meta.instances[3].
 const savedPatch = parseYAML(readFileSync(yamlPath, "utf8"));
 ok(savedPatch.instances[0].output.host === "10.0.0.9" && savedPatch.fixtures.heart.output.universe === 4, "…and both land in the saved YAML");
 
+// ── "new fixture from a file" (the builder's create-and-add): a baked .vxl next to the layout ──
+writeFileSync(path.join(dir, "piece.vxl.json"), JSON.stringify({ pixels: [0, 1, 2].map((i) => ({ i, p: [i * 100, 0, 0], n: [0, 0, 1], s: i / 2, v: 0 })), meta: { pitchMM: 100 } }));
+doc.fixtures.piece = { type: "vxl", params: { file: "piece.vxl.json" } }; // relative to the layout file
+doc.instances.push({ fixture: "piece", name: "piece-1", pos: [0, 0, 9000] });
+r = await (await fetch(`${base}/layout`, { method: "POST", body: JSON.stringify(doc) })).json();
+scene = await (await fetch(`${base}/scene.json`)).json();
+const pieceInst = scene.meta.instances.find((i) => i.name === "piece-1");
+ok(r.ok && pieceInst && scene.pixels.filter((p) => p.inst === scene.meta.instances.indexOf(pieceInst)).length === 3, "a fixture defined from a file path relative to the layout resolves and places");
+
 // ── a bad doc is rejected and nothing changes ─────────────────────────────────
 const bad = await fetch(`${base}/layout`, { method: "POST", body: JSON.stringify({ ...doc, instances: [{ fixture: "nope" }] }) });
 ok(bad.status === 400 && /unknown fixture|undefined fixture/.test((await bad.json()).error), "a layout referencing a missing fixture → 400 with the error");
 scene = await (await fetch(`${base}/scene.json`)).json();
-ok(scene.meta.instances.length === 4, "…and the running scene is untouched");
+ok(scene.meta.instances.length === 5, "…and the running scene is untouched");
 
 // ── external edit → watched file reloads ───────────────────────────────────────
 const text = readFileSync(yamlPath, "utf8").replace("count: [3, 1, 1]", "count: [4, 1, 1]");
 await sleep(50);
 writeFileSync(yamlPath, text);
 let reloaded = false;
-for (let i = 0; i < 30; i++) { await sleep(100); scene = await (await fetch(`${base}/scene.json`)).json(); if (scene.meta.instances.length === 5) { reloaded = true; break; } }
-ok(reloaded, "editing the file on disk reloads the scene (4-wide array + solo = 5 instances)");
+// (the "piece" fixture was applied live but never saved, so the file on disk has the array + solo)
+for (let i = 0; i < 30; i++) { await sleep(100); scene = await (await fetch(`${base}/scene.json`)).json(); if (scene.meta.instances.some((x) => x.name === "row-3-0")) { reloaded = true; break; } }
+ok(reloaded && scene.meta.instances.length === 5 && !scene.meta.instances.some((x) => x.name === "piece-1"), "editing the file on disk reloads the scene from the FILE (4-wide array + solo = 5; the unsaved piece is gone)");
 ok(/reloaded/.test(log), "…and the hub logs the reload");
 
 ws.destroy();
