@@ -27,6 +27,8 @@ By default it loads [`layouts/two-hearts.yaml`](../examples/mobius-heart/layouts
 
 - **drag** orbit · **scroll** zoom
 - **S** — the **simulator**: what the piece actually *looks like* (see below); **B** toggles its bloom
+- **M** — toggle the **model**: the heart's steel rails + rods from its CAD, drawn translucent around
+  the LEDs (an opaque occluder in the simulator). See *Structures* in [`FORMAT.md`](FORMAT.md#structures--the-sculpture-itself-around-the-leds)
 - **N** — toggle the normal quills
 - the **crossfader** (bottom-left) — dissolve between the first two scenes by hand; **[** / **]**
   nudge it, **A** returns to auto

@@ -14,6 +14,7 @@ import { checkFixture, formatReport } from "../io/check.mjs";
 import { buildSceneFromLayout } from "../layout.mjs";
 import { saveScene } from "../format.mjs";
 import { createBus } from "../bus.mjs";
+import { resolveStructure, structureRoutes } from "../structures.mjs";
 import { createHub } from "../hub.mjs";
 import { PATTERNS } from "../patterns.mjs";
 
@@ -26,6 +27,7 @@ try {
   if (cmd === "import") {
     const out = opt("-o"), scale = +(opt("--scale", "1")), normalSign = opt("--normal-sign", "outward"), order = opt("--order", "chain");
     const minTris = +(opt("--min-tris", "1")), maxTris = +(opt("--max-tris", "Infinity")), emitterJson = opt("--emitter"), fixturesDir = opt("--fixtures");
+    const structureFiles = opt("--structure"), structureScale = opt("--structure-scale"); // the sculpture's own CAD, drawn around the LEDs
     const file = args[0];
     if (!file) usage();
     let scene;
@@ -43,8 +45,10 @@ try {
         meta: { source: "vox import", importedFrom: file, importMeta: m },
       });
     }
+    if (structureFiles) scene.meta.structures = structureFiles.split(",").map((f) => resolveStructure({ file: f.trim(), ...(structureScale ? { scaleToMM: +structureScale } : {}) }));
     const r = checkFixture(scene);
     console.log(formatReport(r, file));
+    if (scene.meta.structures) console.log(`     structures: ${scene.meta.structures.map((s) => `${s.name} (${s.format}, ×${s.scaleToMM})`).join(", ")}`);
     if (out) console.log(`     wrote ${saveScene(out, scene)}`);
     process.exit(r.ok ? 0 : 1);
   } else if (cmd === "check") {
@@ -63,12 +67,14 @@ try {
     if (!make) throw new Error(`unknown pattern "${patName}" (have: ${Object.keys(PATTERNS).join(", ")})`);
     const scene = JSON.parse(readFileSync(file, "utf8"));
     scene.meta = { ...(scene.meta || {}), instances: scene.meta?.instances || [], show: { scenes: [patName], single: true } };
+    const structRoutes = structureRoutes(scene);
     const viewerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../viewer");
     const bus = createBus({
       port, staticDir: viewerDir,
       routes: [
         { path: "/scene.json", content: JSON.stringify(scene), contentType: "application/json" },
         { path: "/control", handler: (req, res) => { res.writeHead(200, { "Content-Type": "application/json" }); res.end("{}"); } },
+        ...structRoutes,
       ],
     });
     bus.server.on("error", (e) => { console.error(e.code === "EADDRINUSE" ? `vox: port ${port} is in use — pick another with --port` : `vox: ${e.message}`); process.exit(1); });

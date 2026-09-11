@@ -46,6 +46,7 @@
   <div class="row"><span>Instances</span><span id="h-inst">—</span></div>
   <div class="row"><span>Pixels</span><span id="h-count">—</span></div>
   <div class="row"><span>Mode</span><span id="h-mode">dots</span></div>
+  <div class="row"><span>Model</span><span id="h-model">—</span></div>
   <div class="row"><span>Bus</span><span id="h-bus"><span class="dot" id="h-dot"></span>waiting…</span></div>
   <div class="row"><span>Frames/s</span><span id="h-fps">—</span></div>
   <hr/>
@@ -55,7 +56,7 @@
     <button id="xf-auto" class="on">⟳ Auto-crossfade</button>
   </div>
 </div>
-<div id="help">drag orbit · scroll zoom · <b>S</b> sim · <b>B</b> bloom · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
+<div id="help">drag orbit · scroll zoom · <b>S</b> sim · <b>B</b> bloom · <b>M</b> model · <b>N</b> normals · <b>[</b> <b>]</b> crossfade · <b>A</b> auto</div>
 
 <script type="module">
 import * as THREE from "three";
@@ -64,6 +65,9 @@ import { EffectComposer } from "./vendor/postprocessing/EffectComposer.js";
 import { RenderPass } from "./vendor/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "./vendor/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "./vendor/postprocessing/OutputPass.js";
+import { STLLoader } from "./vendor/loaders/STLLoader.js";
+import { OBJLoader } from "./vendor/loaders/OBJLoader.js";
+import { GLTFLoader } from "./vendor/loaders/GLTFLoader.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -75,6 +79,11 @@ document.body.appendChild(renderer.domElement);
 
 const scene3 = new THREE.Scene();
 scene3.background = new THREE.Color(0x05060a);
+// Lights only matter for structure meshes (LED dots are unlit; the simulator has its own shading).
+scene3.add(new THREE.AmbientLight(0x8090b0, 0.9));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+keyLight.position.set(0.6, 1, 0.8);
+scene3.add(keyLight);
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 1, 500000);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -89,6 +98,49 @@ addEventListener("resize", () => {
 });
 
 let mesh = null, simMesh = null, normalsLines = null, N = 0;
+
+// ── structures: the sculpture's own CAD (STL/GLB/OBJ) drawn around the LEDs ──────────
+// Dots mode: translucent context. Sim mode: an opaque, depth-writing body — a real occluder, so
+// the steel hides the LEDs behind it just like the piece does. Toggle with M.
+const structures = [];
+let structuresOn = true;
+const D2R = Math.PI / 180;
+async function loadStructures(scene) {
+  const list = scene.meta?.structures || [];
+  const stl = new STLLoader(), obj = new OBJLoader(), gltf = new GLTFLoader();
+  await Promise.all(list.map(async (s) => {
+    try {
+      const res = await fetch(s.url);
+      if (!res.ok) throw new Error(`${res.status} ${s.url}`);
+      let object;
+      if (s.format === "stl") { const g = stl.parse(await res.arrayBuffer()); g.computeVertexNormals(); object = new THREE.Mesh(g); }
+      else if (s.format === "obj") object = obj.parse(await res.text());
+      else { const buf = await res.arrayBuffer(); object = await new Promise((ok, err) => gltf.parse(buf, "", (g) => ok(g.scene), err)); }
+      const mats = {
+        dots: new THREE.MeshStandardMaterial({ color: new THREE.Color(s.color), transparent: true, opacity: s.opacity, depthWrite: false, side: THREE.DoubleSide, roughness: 0.8, metalness: 0.2 }),
+        sim: new THREE.MeshStandardMaterial({ color: 0x171a24, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide }),
+      };
+      const meshes = [];
+      object.traverse((o) => { if (o.isMesh) { o.material = mats.dots; meshes.push(o); } });
+      const inner = new THREE.Group();          // the file's own placement: scale (units → mm), rotate, translate
+      inner.add(object);
+      inner.scale.setScalar(s.scaleToMM);
+      inner.rotation.set(s.rotDeg[0] * D2R, s.rotDeg[1] * D2R, s.rotDeg[2] * D2R, "ZYX"); // = voxeled's Z·Y·X Euler
+      inner.position.set(s.pos[0], s.pos[1], s.pos[2]);
+      const outer = new THREE.Group();          // the instance it rides with (per-fixture structures)
+      outer.add(inner);
+      if (s.parent) {
+        outer.rotation.set(s.parent.rotDeg[0] * D2R, s.parent.rotDeg[1] * D2R, s.parent.rotDeg[2] * D2R, "ZYX");
+        outer.position.set(s.parent.pos[0], s.parent.pos[1], s.parent.pos[2]);
+      }
+      scene3.add(outer);
+      structures.push({ group: outer, meshes, mats, name: s.name });
+    } catch (e) { console.warn("VOXELED_STRUCTURE_FAILED", s.name, e); }
+  }));
+  console.log("VOXELED_STRUCTURES_READY", structures.length, "of", list.length);
+  $("h-model").textContent = list.length ? `${structures.length}/${list.length}` : "—";
+  applyMode();
+}
 // ?sim=1 boots straight into the simulator (also how the headless render gate exercises it).
 let simOn = new URLSearchParams(location.search).get("sim") === "1";
 let bloomOn = true;
@@ -281,11 +333,13 @@ async function boot() {
   connectBus();
   console.log("VOXELED_READY", N); // headless render gate looks for this
   console.log("VOXELED_SIM_READY", emitters.length, "emitter profile(s)"); // …and for the simulator
+  loadStructures(scene); // async; logs VOXELED_STRUCTURES_READY when the CAD is in
 }
 
 function applyMode() {
   if (mesh) mesh.visible = !simOn;
   if (simMesh) simMesh.visible = simOn;
+  for (const st of structures) { st.group.visible = structuresOn; for (const m of st.meshes) m.material = simOn ? st.mats.sim : st.mats.dots; }
   const el = $("h-mode");
   el.textContent = simOn ? (bloomOn ? "sim + bloom" : "sim") : "dots";
   el.classList.toggle("sim", simOn);
@@ -341,6 +395,7 @@ addEventListener("keydown", (e) => {
   if (k === "n" && normalsLines) normalsLines.visible = !normalsLines.visible;
   else if (k === "s") { simOn = !simOn; applyMode(); }
   else if (k === "b") { bloomOn = !bloomOn; applyMode(); }
+  else if (k === "m") { structuresOn = !structuresOn; applyMode(); }
   else if (k === "[") { slider.value = Math.max(0, +slider.value - 0.05); goManual(); }
   else if (k === "]") { slider.value = Math.min(1, +slider.value + 0.05); goManual(); }
   else if (k === "a") autoBtn.click();

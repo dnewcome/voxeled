@@ -7,6 +7,7 @@
 // them — 2 hearts 10 ft apart really are 10 ft apart to the pattern.
 import { add, matVec, eulerMatrix } from "./vec.mjs";
 import { buildScene } from "./format.mjs";
+import { resolveStructure } from "./structures.mjs";
 
 // instances: [{ name, fixtureName, fixture:{pixels,meta}, pos:[x,y,z]mm, rotDeg:[rx,ry,rz] }]
 // Each instance carries its OWN resolved fixture, so a rig can mix different fixtures.
@@ -61,7 +62,7 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
 //   fixtures: { <fixtureName>: { type, params } }
 //   instances: [ { fixture: <fixtureName>, name, pos:[x,y,z], rotDeg:[rx,ry,rz] } ]
 //   show: { holdS, fadeS, scenes: [ { name, pattern, params } ] }   (optional)
-export function resolveLayout(doc, { fixtures = {}, patterns = {} } = {}) {
+export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = null } = {}) {
   const fixDefs = doc.fixtures || {};
   const cache = {};
   const getFixture = (fixtureName) => {
@@ -95,11 +96,22 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {} } = {}) {
   });
   if (!instances.length) throw new Error("layout has no instances");
 
+  // Structures (the sculpture's own CAD): per-fixture ones ride along with every instance
+  // (parent = the instance transform); scene-level ones sit once in world space.
+  const structures = [];
+  for (const inst of instances)
+    for (const s of fixDefs[inst.fixtureName]?.structures || [])
+      structures.push(resolveStructure(s, { baseDir }, { pos: inst.pos || [0, 0, 0], rotDeg: inst.rotDeg || [0, 0, 0] }, `${inst.name}:${s.name || String(s.file).replace(/^.*[\\/]/, "")}`));
+  for (const s of doc.structures || []) structures.push(resolveStructure(s, { baseDir }));
+
   const scene = buildSceneFromLayout({
     name: doc.name || "layout",
     units: doc.units || "mm",
     instances,
-    meta: { fixtureTypes: Object.fromEntries(Object.entries(fixDefs).map(([k, v]) => [k, v.type])) },
+    meta: {
+      fixtureTypes: Object.fromEntries(Object.entries(fixDefs).map(([k, v]) => [k, v.type])),
+      ...(structures.length ? { structures } : {}),
+    },
   });
 
   let show = null;

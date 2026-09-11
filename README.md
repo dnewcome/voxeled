@@ -122,6 +122,9 @@ export const wave = ({ x, y, z }, t) =>
   Each point carries its fixture index (via `FixtureIndex` / the `F2` channel) so `FilterPoints` can
   group per fixture. **Confirmed rendering on TiXL 4.1.**
 - **Blender / TouchDesigner / three.js** — via glTF export *and* import (see the scene-format section).
+- **The sculpture's own CAD** — a layout's `structures:` draw the steel (STL/GLB/OBJ) around the LEDs:
+  translucent context in the viewer, an opaque **occluder** in the simulator. The demo ships the
+  heart's rails + rods from its build123d model (`M` to toggle).
 - **Any mechanical CAD (SolidWorks / Fusion / Onshape / STEP-STL)** — the **chip-island importer**:
   export the model with its LED chips as bodies, `vox import model.stl`, and every chip becomes an
   LED with an inferred emission normal and a recovered strand order — no plugin in anyone's CAD.

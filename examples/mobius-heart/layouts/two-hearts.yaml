@@ -11,6 +11,12 @@ fixtures:
       panelsPerSide: 8
       pitchMM: 10
       twist: mobius
+    # The sculpture itself — the steel rails + rods from the heart's CAD (mobius-led-heart/cad),
+    # exported to STL in mm, same frame as the ribbon. Drawn translucent around the LEDs; in the
+    # simulator (S) it's an opaque occluder. Toggle with M. Files resolve relative to this layout.
+    structures:
+      - { file: ../assets/heart_rails.stl, opacity: 0.35 }
+      - { file: ../assets/heart_rods.stl,  opacity: 0.35 }
 
 # Instances: copies of a fixture placed in shared world space (translation mm, rotation deg).
 # 10 ft = 3048 mm, centred on the origin → ±1524 mm in X.

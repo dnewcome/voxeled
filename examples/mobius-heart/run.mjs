@@ -22,6 +22,7 @@ import { createDispatcher } from "../../src/output/dispatch.mjs";
 import { createColorInput } from "../../src/input/color-tcp.mjs";
 import { createDDPInput } from "../../src/input/ddp.mjs";
 import { qrEncode, qrToAscii } from "../../src/qr.mjs";
+import { structureRoutes } from "../../src/structures.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
@@ -36,7 +37,7 @@ const layoutPath = process.argv[2]
 let scene, showCfg;
 try {
   const doc = parseYAML(readFileSync(layoutPath, "utf8"));
-  ({ scene, show: showCfg } = resolveLayout(doc, { fixtures: FIXTURES, patterns: PATTERNS }));
+  ({ scene, show: showCfg } = resolveLayout(doc, { fixtures: FIXTURES, patterns: PATTERNS, baseDir: path.dirname(layoutPath) }));
 } catch (e) {
   console.error(`layout error in ${path.relative(process.cwd(), layoutPath)}:\n  ${e.message}`);
   process.exit(1);
@@ -54,6 +55,7 @@ const show = createShow({ scenes, holdS: showCfg?.holdS ?? 4, fadeS: showCfg?.fa
 const shade = single ? single() : show.shade;
 
 scene.meta.show = { scenes: show.names, single: !!single };
+const structRoutes = structureRoutes(scene); // serves the sculpture's CAD meshes; stamps their urls
 const sceneJSON = JSON.stringify(scene);
 
 const senders = [];
@@ -79,6 +81,7 @@ const bus = createBus({
   routes: [
     { path: "/scene.json", content: sceneJSON, contentType: "application/json" },
     { path: "/control", handler: controlHandler },
+    ...structRoutes,
   ],
 });
 

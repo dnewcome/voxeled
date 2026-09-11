@@ -60,6 +60,9 @@ ok(out.includes("VOXELED_SIM_READY"), "simulator built (oriented emitter bodies 
 ok(!out.includes("VOXELED_ERROR"), "viewer boot threw no error");
 ok(!/Failed to resolve module|net::ERR|Uncaught (Syntax|Reference|Type)Error/.test(out), "no module-resolution / load errors");
 ok(!/Shader Error|WebGLProgram: Shader|THREE\.WebGLShader/.test(out), "sim shader compiled without GLSL errors");
+const sm = out.match(/VOXELED_STRUCTURES_READY (\d+) of (\d+)/);
+ok(sm && sm[1] === sm[2] && +sm[2] >= 1, `structure meshes (the heart's steel) all loaded in the viewer (${sm ? `${sm[1]}/${sm[2]}` : "no signal"})`);
+ok(!out.includes("VOXELED_STRUCTURE_FAILED"), "no structure failed to load");
 ok(existsSync(shot), `screenshot saved → ${path.relative(ROOT, shot)}`);
 
 console.log(`viewer: ${pass} passed, ${fail} failed`);

@@ -120,6 +120,38 @@ LED, a diffused strip, and a glowing rope are the same body with different `view
 `color × lobe(view angle) × core`, its back is dark backing, and both write depth, so the bodies
 occlude one another (a panel ribbon's quads *are* the ribbon, dark on the back).
 
+## Structures — the sculpture itself around the LEDs
+
+The map says where the LEDs are; a **structure** is the *rest* of the piece — the steel ribbon, the
+tubes and spine — as a CAD mesh drawn around them. In the viewer's dots mode it's translucent
+context; in the **simulator** it's an opaque, depth-writing body, so the steel hides the LEDs behind
+it exactly as the real piece does (toggle with **M**). STL, GLB/glTF and OBJ load; STEP does not —
+export a mesh from your CAD (the heart's `heart_rails.stl` / `heart_rods.stl` came straight out of
+its build123d model, in mm, in the same frame as the ribbon, so they overlay with no offset).
+
+```yaml
+fixtures:
+  heart:
+    type: mobius-heart
+    structures:                                   # per FIXTURE: rides with every instance
+      - { file: ../assets/heart_rails.stl, opacity: 0.35 }
+      - { file: ../assets/heart_rods.stl }
+structures:                                       # per SCENE: once, in world space
+  - { file: ../assets/frame.glb, scaleToMM: 1000, pos: [0, 0, 0], rotDeg: [0, 90, 0] }
+```
+
+| field | default | meaning |
+|---|---|---|
+| `file` | — | STL / GLB / glTF / OBJ, resolved relative to the layout file |
+| `scaleToMM` | 1 (glTF: 1000) | file units → mm (STL/OBJ carry none; glTF is metres) |
+| `pos`, `rotDeg` | 0 | the mesh's own placement (mm, Euler degrees Z·Y·X like instances) |
+| `opacity`, `color` | 0.3, `#6b7a99` | the translucent dots-mode look (sim mode is always opaque body) |
+
+Per-fixture structures land in `meta.structures[]` once per instance with the instance transform
+as `parent`; the hub serves each unique file at `/structure/<i>.<ext>` (`src/structures.mjs`).
+`vox import … --structure model.stl[,frame.glb] [--structure-scale N]` attaches structures to an
+imported scene, and `vox preview` serves them.
+
 ## Bringing models in — the toolchain
 
 The principle: **bake in the tool, one baked interchange.** Every modeling tool has its own idea
