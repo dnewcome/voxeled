@@ -45,7 +45,11 @@ try {
         meta: { source: "vox import", importedFrom: file, importMeta: m },
       });
     }
-    if (structureFiles) scene.meta.structures = structureFiles.split(",").map((f) => resolveStructure({ file: f.trim(), ...(structureScale ? { scaleToMM: +structureScale } : {}) }));
+    // The sculpture's CAD belongs to the fixture: attach it to the imported instance (parent =
+    // its transform, inst 0) so the builder moves the whole piece, LEDs and steel together.
+    if (structureFiles) scene.meta.structures = structureFiles.split(",").map((f) => ({
+      ...resolveStructure({ file: f.trim(), ...(structureScale ? { scaleToMM: +structureScale } : {}) }, {}, { pos: [0, 0, 0], rotDeg: [0, 0, 0] }), inst: 0,
+    }));
     const r = checkFixture(scene);
     console.log(formatReport(r, file));
     if (scene.meta.structures) console.log(`     structures: ${scene.meta.structures.map((s) => `${s.name} (${s.format}, ×${s.scaleToMM})`).join(", ")}`);

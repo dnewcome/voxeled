@@ -451,7 +451,9 @@ function select(k) {
   const e = entryOf(k);
   const generated = e && (e.entry.array || e.entry.ring);
   $("b-sel").textContent = `${inst.name}  ·  ${inst.fixture}`;
-  $("b-sub").textContent = generated ? `element ${e.src.k} of a generated ${e.entry.array ? "array" : "ring"} — moving it moves the whole ${e.entry.array ? "array" : "ring"}` : `layout entry #${e?.src?.i ?? "?"}`;
+  const worldStructs = (scene.meta?.structures || []).filter((s) => s.inst == null).length;
+  $("b-sub").textContent = (generated ? `element ${e.src.k} of a generated ${e.entry.array ? "array" : "ring"} — moving it moves the whole ${e.entry.array ? "array" : "ring"}` : `layout entry #${e?.src?.i ?? "?"}`)
+    + (worldStructs ? ` · ${worldStructs} world-placed structure(s) stay put (attach CAD to a fixture to move it along)` : "");
   fillFields(tf);
   proxy.position.set(...tf.pos);
   proxy.rotation.set(tf.rotDeg[0] * D2R, tf.rotDeg[1] * D2R, tf.rotDeg[2] * D2R, "ZYX");
@@ -584,6 +586,8 @@ function loop() {
   if (simOn && composer) composer.render(); else renderer.render(scene3, camera);
 }
 loop();
+// debug / automation hook (also lets tests drive the builder without a mouse)
+window.voxeled = { select, deselect, liveTransform, commitTransform, get structures() { return structures; }, get instTf() { return instTf; }, get selected() { return selected; }, get scene() { return scene; } };
 boot().catch((e) => { $("h-name").textContent = "load error"; console.error("VOXELED_ERROR", e); });
 </script>
 </body>
