@@ -62,6 +62,11 @@
   <div class="row"><span>Bus</span><span id="h-bus"><span class="dot" id="h-dot"></span>waiting…</span></div>
   <div class="row"><span>Frames/s</span><span id="h-fps">—</span></div>
   <hr/>
+  <div class="btns" id="view" style="margin-top:0">
+    <button id="v-sim" title="S">sim</button><button id="v-bloom" title="B">bloom</button>
+    <button id="v-model" title="M">model</button><button id="v-normals" title="N">normals</button><button id="v-build" title="E">builder</button>
+  </div>
+  <hr/>
   <div id="xf">
     <div class="lbl"><span class="a">◂ <b id="xf-a">A</b></span><span class="b"><b id="xf-b">B</b> ▸</span></div>
     <input id="xf-slider" type="range" min="0" max="1" step="0.005" value="0" />
@@ -168,7 +173,7 @@ addEventListener("resize", () => {
 
 // ── state ─────────────────────────────────────────────────────────────────────
 let scene = null, N = 0, mesh = null, simMesh = null, normalsLines = null;
-let simOn = qs.get("sim") === "1", bloomOn = true;
+let simOn = qs.get("sim") === "1", bloomOn = true, normalsOn = qs.get("normals") === "1"; // view state survives scene rebuilds
 let modelMode = { translucent: 0, opaque: 1, hidden: 2 }[qs.get("model")] ?? (+qs.get("model") || 0); // 0 translucent · 1 opaque · 2 hidden (?model=opaque)
 let framed = false;
 const structures = [];
@@ -283,7 +288,7 @@ function buildSceneObjects(sc) {
   // normal quills
   normalsLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x3a6ea5, transparent: true, opacity: 0.5 }));
   normalsLines.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(N * 6), 3));
-  normalsLines.visible = qs.get("normals") === "1" || (normalsLines?.visible ?? false);
+  normalsLines.visible = normalsOn;
   normalsLines.userData.qlen = ledSize * 3;
   for (let k = 0; k < instTf.length; k++) placeInstance(k);
   scene3.add(mesh, simMesh, normalsLines);
@@ -385,6 +390,10 @@ async function loadStructures(sc) {
 function applyMode() {
   if (mesh) mesh.visible = !simOn;
   if (simMesh) simMesh.visible = simOn;
+  if (normalsLines) normalsLines.visible = normalsOn;
+  $("v-sim").classList.toggle("on", simOn); $("v-bloom").classList.toggle("on", simOn && bloomOn); $("v-bloom").disabled = !simOn;
+  $("v-normals").classList.toggle("on", normalsOn); $("v-build").classList.toggle("on", buildOn);
+  $("v-model").textContent = `model: ${["translucent", "opaque", "hidden"][modelMode]}`; $("v-model").classList.toggle("on", modelMode !== 2);
   const el = $("h-mode");
   el.textContent = simOn ? (bloomOn ? "sim + bloom" : "sim") : "dots";
   el.classList.toggle("sim", simOn);
@@ -480,6 +489,7 @@ function markHubStale(why) {
 async function toggleBuilder(on) {
   buildOn = on;
   $("build").hidden = !on;
+  $("v-build").classList.toggle("on", on);
   if (!on) { deselect(); return; }
   try { await refreshLayout(); } catch (e) { markHubStale(e.message); return; }
   const inst = scene?.meta?.instances || [];
@@ -669,10 +679,17 @@ renderer.domElement.addEventListener("pointerup", (e) => {
   if (hit && hit.instanceId != null) select(instOf[hit.instanceId]); else deselect();
 });
 
+// on-screen toggles (the keys still work — but not while a builder field has focus; Esc leaves it)
+$("v-sim").addEventListener("click", () => { simOn = !simOn; applyMode(); });
+$("v-bloom").addEventListener("click", () => { bloomOn = !bloomOn; applyMode(); });
+$("v-model").addEventListener("click", () => { modelMode = (modelMode + 1) % 3; applyMode(); });
+$("v-normals").addEventListener("click", () => { normalsOn = !normalsOn; applyMode(); });
+$("v-build").addEventListener("click", () => toggleBuilder(!buildOn));
+
 addEventListener("keydown", (e) => {
-  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) { if (e.key === "Escape" || e.key === "Enter") e.target.blur(); return; }
   const k = e.key.toLowerCase();
-  if (k === "n" && normalsLines) normalsLines.visible = !normalsLines.visible;
+  if (k === "n") { normalsOn = !normalsOn; applyMode(); }
   else if (k === "s") { simOn = !simOn; applyMode(); }
   else if (k === "b") { bloomOn = !bloomOn; applyMode(); }
   else if (k === "m") { modelMode = (modelMode + 1) % 3; applyMode(); }
