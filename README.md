@@ -10,6 +10,16 @@ Drive real fixtures from *spatial* animations authored in **real-world units** �
 
 > **Status: Phase 0 — the spine runs.** A working demo maps and drives the [Möbius LED Heart](https://github.com/dnewcome/mobius-led-heart): a scene → a hub running one spatial pattern → a WebGL preview *and* Art-Net/DDP output, all from identical frames (`npm run demo`; verified by 17 headless checks). This is an early slice, not a finished product — the stable format, the importers, and the automapper are still ahead. The longer-horizon code samples further down are marked **illustrative**. Watch/star to follow along.
 
+## Documentation
+
+- **[Authoring guide](docs/GUIDE.md)** — the whole workflow: concepts, frames & units, the complete
+  layout reference (fixture types, instances & generators, emitter, patch, show), getting geometry
+  in, structures, paths & ropes, the builder, baking/export, running, a worked example (Thread), gotchas.
+- [Scene & layout formats](docs/FORMAT.md) · [Demo walkthrough](docs/DEMO-mobius-heart.md) ·
+  [Visibility & the simulator](docs/visibility.md) · [Protocols](docs/interop/protocols.md) ·
+  [Chromatik `.lxm`/`.lxf`](docs/interop/lxm.md) · [Design](docs/DESIGN.md)
+- Integrations: [Blender](integrations/blender/) · [Grasshopper](integrations/grasshopper/) · [TiXL](integrations/tixl/)
+
 ## Try it — Möbius LED Heart
 
 The first working slice maps and drives a real piece, the [Möbius LED Heart](https://github.com/dnewcome/mobius-led-heart):
