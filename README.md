@@ -8,7 +8,7 @@ Drive real fixtures from *spatial* animations authored in **real-world units** �
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-> **Status: Phase 0 — the spine runs.** A working demo maps and drives the [Möbius LED Heart](https://github.com/dnewcome/mobius-led-heart): a scene → a hub running one spatial pattern → a WebGL preview *and* Art-Net/DDP output, all from identical frames (`npm run demo`; verified by 17 headless checks). This is an early slice, not a finished product — the stable format, the importers, and the automapper are still ahead. The longer-horizon code samples further down are marked **illustrative**. Watch/star to follow along.
+> **Status: authoring works end to end.** A layout file (fixtures + placements + structures + patch + show) → a hub → identical frames to a WebGL preview / **appearance simulator** and to Art-Net, DDP and dan-mx fixtures (`npm run demo`; 22 test suites incl. a headless-Chrome render gate). Geometry comes in from mechanical CAD (chip-island STL/OBJ/GLB import), Blender, Grasshopper, glTF, Chromatik `.lxm`, or a path + rope description; an in-viewer **builder** places, arrays, wires and saves it; voxeled is also a native **DDP Display**. Still ahead: the camera automapper, dynamic scenes, GDTF/MVR, the hosted layer. Long-horizon code samples further down are marked **illustrative**. Start with the [authoring guide](docs/GUIDE.md).
 
 ## Documentation
 
@@ -190,10 +190,10 @@ Two differentiators the incumbents leave open:
 
 ## Roadmap
 
-- **Phase 0 — the spine** *(now)*: minimal scene format → hub loads it → one spatial pattern → normalized bus → WebGL preview + DDP/Art-Net sender, on one strip. Preview and reality visibly match.
-- **Phase 1 — bring your geometry**: glTF import ✅, the chip-island mesh importer for any mechanical CAD ✅, LX/Chromatik `.lxm` import ✅; still ahead: a Blender addon that bakes **positions + normals** via Geometry Nodes, a Grasshopper component, fixture packages + a data-driven registry, then GDTF/MVR.
-- **Phase 2 — automap**: Gray-code structured-light camera mapper, multi-view triangulation, export to native + glTF. (The virtual-camera visibility primitive is this math already — automapping is it run in reverse.)
-- **Phase 3 — live**: scenes & crossfades ✅, the appearance simulator ✅; still ahead: dynamic scenes (live re-localization / MVR-xchange), DAW-style channels + modulators (LFOs / envelopes / audio), the live-frame VJ jack-in (NDI).
+- **Phase 0 — the spine** ✅: scene format → hub → spatial patterns → normalized bus → WebGL preview + DDP/Art-Net/dan-mx senders, mixed per-fixture patch. Preview and reality visibly match.
+- **Phase 1 — bring your geometry**: glTF import ✅, the chip-island mesh importer for any mechanical CAD ✅, LX/Chromatik `.lxm` import ✅, Blender addon ✅, Grasshopper component ✅, paths + ropes (LEDs derived from a structure) ✅, structures (the piece's own CAD as context + occluder) ✅, the in-viewer builder (place / array / wire / save, live layout file) ✅; still ahead: fixture packages + a data-driven registry, then GDTF/MVR.
+- **Phase 2 — automap**: Gray-code structured-light camera mapper, multi-view triangulation, export to native + glTF. (The virtual-camera visibility primitive ✅ is this math already — automapping is it run in reverse.)
+- **Phase 3 — live**: scenes & crossfades ✅, the appearance simulator ✅, external frame input (TiXL over TCP, any DDP sender — voxeled as a DDP Display) ✅; still ahead: dynamic scenes (live re-localization / MVR-xchange), DAW-style channels + modulators (LFOs / envelopes / audio), the live-frame VJ jack-in (NDI).
 - **Phase 4 — hosted & public**: the same hub behind a URL, so a piece has an *address*. First slice landed ✅: the demo prints a QR code; a phone on the LAN scans it and gets a scene picker + crossfader on the hub's `/control` seam (`viewer/phone.html`). Two things the address unlocks:
   - **Public interaction** — a QR code on the sculpture opens a phone page (no app) that jacks into the hub's control seam: pick or trigger scenes, nudge the crossfader, send a colour, or make *your tap a wave that starts from where you're standing* — the map knows where that is. Per-piece, rate-limited, moderated. (We've done QR-driven interaction on past pieces; this makes it a built-in rather than a one-off.)
   - **Collaborative pattern design** — patterns are already pure `f(pixel, t, ctx)` and the viewer + simulator already run in the browser, so collaborators write and preview a pattern *against the piece's real map, in the simulator, in a browser tab* — no install — then submit it as a scene to the show. Sandboxed (a Worker), versioned, previewable before it ever touches an LED.
