@@ -17,7 +17,8 @@ Drive real fixtures from *spatial* animations authored in **real-world units** �
   in, structures, paths & ropes, the builder, baking/export, running, a worked example (Thread), gotchas.
 - [Scene & layout formats](docs/FORMAT.md) · [Demo walkthrough](docs/DEMO-mobius-heart.md) ·
   [Visibility & the simulator](docs/visibility.md) · [Protocols](docs/interop/protocols.md) ·
-  [Chromatik `.lxm`/`.lxf`](docs/interop/lxm.md) · [Design](docs/DESIGN.md)
+  [Chromatik `.lxm`/`.lxf`](docs/interop/lxm.md) · [Design](docs/DESIGN.md) ·
+  [The landscape — where voxeled sits](docs/LANDSCAPE.md)
 - Integrations: [Blender](integrations/blender/) · [Grasshopper](integrations/grasshopper/) · [TiXL](integrations/tixl/)
 
 ## Try it — Möbius LED Heart
@@ -167,6 +168,8 @@ export const wave = ({ x, y, z }, t) =>
   protocol out. See [`docs/interop/protocols.md`](docs/interop/protocols.md) for the whole family.
 
 ## Where voxeled sits
+
+The full tier-by-tier survey (hobby sequencers → art engines → real-time engines → media servers → consoles/previz) and what "pro show control" would still need is in [`docs/LANDSCAPE.md`](docs/LANDSCAPE.md).
 
 | | **voxeled** | xLights | MADRIX 5 | LX / Chromatik |
 |---|---|---|---|---|
