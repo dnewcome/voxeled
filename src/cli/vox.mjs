@@ -5,6 +5,7 @@
 //              [--min-tris N] [--max-tris N] [--emitter '{"viewingAngleDeg":170}'] [--fixtures <dir>]
 //   vox check  <scene-or-fixture.vxl.json>
 //   vox preview <scene.vxl.json> [--port 8080] [--pattern ribbonChase]   → the viewer (add ?sim=1)
+//   vox streetview <lat> <lon> [-o dir] [--size 640] [--key K]   → n/e/s/w/u/d.jpg cubemap for a `vantages:` entry
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,13 +16,15 @@ import { buildSceneFromLayout } from "../layout.mjs";
 import { saveScene } from "../format.mjs";
 import { createBus } from "../bus.mjs";
 import { resolveStructure, structureRoutes } from "../structures.mjs";
+import { vantageRoutes } from "../site.mjs";
+import { fetchStreetView } from "../io/streetview.mjs";
 import { createHub } from "../hub.mjs";
 import { PATTERNS } from "../patterns.mjs";
 
 const args = process.argv.slice(2);
 const cmd = args.shift();
 const opt = (name, dflt) => { const i = args.indexOf(name); if (i < 0) return dflt; const v = args[i + 1]; args.splice(i, 2); return v; };
-const usage = () => { console.error("usage: vox import <mesh|.lxm> [-o out.vxl.json] [--scale N] [--normal-sign P] [--order chain|file] [--min-tris N] [--max-tris N] [--emitter JSON]\n       vox check <file.vxl.json>\n       vox preview <file.vxl.json> [--port 8080] [--pattern ribbonChase]"); process.exit(2); };
+const usage = () => { console.error("usage: vox import <mesh|.lxm> [-o out.vxl.json] [--scale N] [--normal-sign P] [--order chain|file] [--min-tris N] [--max-tris N] [--emitter JSON]\n       vox check <file.vxl.json>\n       vox preview <file.vxl.json> [--port 8080] [--pattern ribbonChase]\n       vox streetview <lat> <lon> [-o dir] [--size 640] [--key K | GOOGLE_MAPS_API_KEY]"); process.exit(2); };
 
 try {
   if (cmd === "import") {
@@ -71,7 +74,7 @@ try {
     if (!make) throw new Error(`unknown pattern "${patName}" (have: ${Object.keys(PATTERNS).join(", ")})`);
     const scene = JSON.parse(readFileSync(file, "utf8"));
     scene.meta = { ...(scene.meta || {}), instances: scene.meta?.instances || [], show: { scenes: [patName], single: true } };
-    const structRoutes = structureRoutes(scene);
+    const structRoutes = structureRoutes(scene), vantRoutes = vantageRoutes(scene);
     const viewerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../viewer");
     const bus = createBus({
       port, staticDir: viewerDir,
@@ -79,6 +82,7 @@ try {
         { path: "/scene.json", content: JSON.stringify(scene), contentType: "application/json" },
         { path: "/control", handler: (req, res) => { res.writeHead(200, { "Content-Type": "application/json" }); res.end("{}"); } },
         ...structRoutes,
+        ...vantRoutes,
       ],
     });
     bus.server.on("error", (e) => { console.error(e.code === "EADDRINUSE" ? `vox: port ${port} is in use — pick another with --port` : `vox: ${e.message}`); process.exit(1); });
@@ -87,6 +91,15 @@ try {
     console.log(formatReport(checkFixture(scene), file));
     console.log(`vox preview: ${bus.url}   (append ?sim=1 for the simulator · pattern ${patName} · Ctrl-C to stop)`);
     process.on("SIGINT", () => { hub.stop(); bus.close(); process.exit(0); });
+  } else if (cmd === "streetview") {
+    // Fetch a Street View spot as a compass-aligned cubemap (n/e/s/w/u/d.jpg) for a `vantages:` entry.
+    const [lat, lon] = args.map(Number);
+    const outDir = opt("-o", opt("--out", "streetview")), size = +opt("--size", "640"), key = opt("--key", process.env.GOOGLE_MAPS_API_KEY);
+    if (!(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) usage();
+    const info = await fetchStreetView({ lat, lon, size, key, outDir });
+    console.log(`fetched pano ${info.panoId} (${info.date || "?"}) at ${info.lat}, ${info.lon} → ${outDir}/{n,e,s,w,u,d}.jpg`);
+    console.log(`\nadd to your layout (the pano's TRUE position, not the one you asked for):\n\nvantages:\n  - { name: street, lat: ${info.lat}, lon: ${info.lon}, eyeHeightMM: 2500, cube: ${outDir} }   # Street View cars shoot from ~2.5 m\n`);
+    console.log("then press V in the viewer. Imagery © Google — a working preview, not an asset to redistribute.");
   } else usage();
 } catch (e) {
   console.error(`vox: ${e.message}`);

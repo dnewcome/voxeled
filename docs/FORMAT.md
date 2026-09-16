@@ -212,6 +212,39 @@ as `parent`; the hub serves each unique file at `/structure/<i>.<ext>` (`src/str
 `vox import … --structure model.stl[,frame.glb] [--structure-scale N]` attaches structures to an
 imported scene, and `vox preview` serves them.
 
+## Site context — the piece in the world, seen from where people stand
+
+Two blocks anchor a layout to a real place and let you *stand* there in the viewer (**V**):
+
+```yaml
+site: { lat: 37.7749, lon: -122.4194, headingDeg: 0, groundMM: 0 }   # origin at lat/lon; −Z faces this compass bearing
+vantages:
+  - { name: sidewalk, lat: 37.77481, lon: -122.4194, eyeHeightMM: 1600, image: photos/sidewalk.jpg }  # equirectangular 360°
+  - { name: corner,   lat: 37.7750,  lon: -122.4190, eyeHeightMM: 2500, cube: streetview/corner }     # n/e/s/w/u/d faces
+  - { name: across,   pos: [-6000, 1600, 9000], image: photos/across.jpg, headingDeg: 210, fovDeg: 70 } # or a spot in mm
+```
+
+| field | default | meaning |
+|---|---|---|
+| `site.lat`, `site.lon` | — | where voxeled's origin sits |
+| `site.headingDeg` | 0 | compass bearing (0 north, 90 east) of the piece's local −Z |
+| `site.groundMM` | 0 | world Y of the ground; eye = ground + `eyeHeightMM` |
+| `lat`/`lon` **or** `pos` | — | where the viewer stands (geo via the anchor, or mm directly) |
+| `eyeHeightMM` | 1600 | eye above ground (Street View cars: ~2500) |
+| `image` | — | an equirectangular 360° photo (jpg/png/webp); its centre column faces `headingDeg` |
+| `cube` | — | a directory of compass-aligned faces `n e s w u d .jpg/.png` (`u`/`d` shot facing north, pitch ±90) |
+| `headingDeg` | 0 | compass bearing of the image's centre column (a photo-sphere's `PoseHeadingDegrees`) |
+| `fovDeg` | 60 | initial vertical field of view |
+
+The hub serves the imagery at `/vantage/<i>[.ext | /<face>.ext]`; the viewer wraps it around the
+camera as a 200 m sphere/box drawn first without depth, so LEDs, structures and the simulator render
+over the photo at the true bearing and size. Drag to look, wheel to zoom, **V** cycles vantages;
+`?stand=<name>&bearing=<deg>&pitch=<deg>&fov=<deg>` reproduces a view. Street View is one source
+(`vox streetview <lat> <lon> -o dir`, the official Static API, six 90° faces, needs
+`GOOGLE_MAPS_API_KEY`); a night 360° photo from your phone at the spot is a better one — Street
+View is daytime and LED art is seen at night. No depth comes with a photo, so the real buildings
+don't occlude the piece; for that, bring a site scan/CAD in as a scene-level structure.
+
 ## Bringing models in — the toolchain
 
 The principle: **bake in the tool, one baked interchange.** Every modeling tool has its own idea

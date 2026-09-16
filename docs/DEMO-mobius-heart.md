@@ -75,6 +75,8 @@ in over ~1 s), the **crossfader**, and the **auto** toggle. It's a thin client o
 seam — the same one the viewer's crossfader uses — polling every 1.5 s so several phones (and
 auto mode) stay in sync, and the hub keeps running the show if the phone walks away. This is the
 first slice of the roadmap's *hosted & public* phase: hosted is the same seam behind a public URL.
+**V** stands at a site vantage (a 360° backdrop wrapped around the camera — `layouts/site.yaml`, `?stand=<name>&bearing=&pitch=&fov=`; see `docs/FORMAT.md` § Site context).
+
 `VOX_NO_QR=1` hides the code; the QR encoder is dependency-free (`src/qr.mjs`, verified by
 decoding with OpenCV in the tests).
 

@@ -201,17 +201,15 @@ Two differentiators the incumbents leave open:
   - **Public interaction** — a QR code on the sculpture opens a phone page (no app) that jacks into the hub's control seam: pick or trigger scenes, nudge the crossfader, send a colour, or make *your tap a wave that starts from where you're standing* — the map knows where that is. Per-piece, rate-limited, moderated. (We've done QR-driven interaction on past pieces; this makes it a built-in rather than a one-off.)
   - **Collaborative pattern design** — patterns are already pure `f(pixel, t, ctx)` and the viewer + simulator already run in the browser, so collaborators write and preview a pattern *against the piece's real map, in the simulator, in a browser tab* — no install — then submit it as a scene to the show. Sandboxed (a Worker), versioned, previewable before it ever touches an LED.
   - The LEDs never depend on the internet: the local hub keeps driving the piece and falls back to its own show if the link drops; the hosted side is control-plane + preview + the piece's public face.
-- **Phase 5 — site context**: see the piece *in place* before it's built — from a Google Street View
-  vantage, in a city's 3D model, or against a site scan. The enabler is one small addition to the
-  layout: a **geo-anchor** (`site: { lat, lon, alt, headingDeg }`) that maps voxeled's mm frame onto
-  the world, after which any georeferenced backdrop lines up. Candidate routes, cheapest first:
-  (1) a **360° site photo** (or a fetched Street View panorama) as a background sphere with the
-  camera at the photo's position — the piece rendered on top by the simulator, occluded by whatever
-  site CAD/scan you add as a structure; (2) **Google Photorealistic 3D Tiles** (Map Tiles API) loaded
-  in three.js, so you fly to street level in the real city with the piece standing in it;
-  (3) a **photogrammetry / LiDAR scan** of the site as a scene-level structure (no API at all).
-  Street View itself has no supported 3D-overlay path, so (1) treats a panorama as a photo-match
-  backdrop rather than driving the Street View widget. Roadmap only — nothing built yet.
+- **Phase 5 — site context**: see the piece *in place* before it's built. First slice landed ✅: a
+  **geo-anchor** (`site: { lat, lon, headingDeg }`) maps voxeled's mm frame onto the world, and
+  **vantages** — places to stand, each with a 360° backdrop (an equirectangular photo, or a
+  compass-aligned cubemap that `vox streetview <lat> <lon>` fetches through the official Street View
+  Static API) — put the camera at that eye with the piece rendered over the photo at the true bearing
+  and size (**V** in the viewer; `layouts/site.yaml`). Still ahead: **Google Photorealistic 3D
+  Tiles** in three.js (fly to street level in the real city, real buildings occluding the piece), a
+  site scan / LiDAR as an occluding structure, and photo-matching a vantage from a single photo.
+  Street View itself has no supported 3D-overlay path, so the panorama is a backdrop, not the widget.
 
 See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design notes and the reasoning behind these decisions.
 

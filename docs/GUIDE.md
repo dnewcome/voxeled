@@ -6,7 +6,7 @@ example (the Thread sculpture). The short docs each cover one part; this is the 
 
 - [Concepts](#1-concepts) · [Frames & units](#2-frames-and-units) · [The layout file](#3-the-layout-file)
 - [Getting geometry in](#4-getting-geometry-in) · [Structures](#5-structures--the-body-of-the-piece) · [Placing LEDs on a structure](#6-placing-leds-on-a-structure-paths-and-ropes)
-- [The builder](#7-the-builder) · [Baking & export](#8-baking-and-export) · [Running](#9-running-the-hub)
+- [The builder](#7-the-builder) · [Baking & export](#8-baking-and-export) · [Running](#9-running-the-hub) · [Site context](#12-site-context-the-piece-in-the-world)
 - [Worked example: Thread](#10-worked-example-thread) · [Gotchas](#11-gotchas)
 
 ---
@@ -334,3 +334,35 @@ instances:                                    # Z-up model → voxeled's Y-up
 - **Scene-level structures** don't move with fixtures; per-fixture ones do.
 - **Data order is addressing.** Generators and importers define it (chaining, curve order, list
   order); `vox check` flags a scrambled order.
+
+## 12. Site context: the piece in the world
+
+Before a piece is built, see it *from where people will stand*. Anchor the layout to a place and
+list vantages, each with a 360° backdrop:
+
+```yaml
+site: { lat: 37.7749, lon: -122.4194, headingDeg: 0 }          # origin here; the piece's −Z faces north
+vantages:
+  - { name: sidewalk, lat: 37.77481, lon: -122.4194, eyeHeightMM: 1600, image: photos/sidewalk-night.jpg }
+  - { name: corner,   lat: 37.7750,  lon: -122.4190, eyeHeightMM: 2500, cube: streetview/corner }
+```
+
+Press **V** (or *stand*) in the viewer: the camera goes to that eye, the photo wraps around it, and
+the LEDs / structures / simulator render over it at the true bearing and size. Drag to look around,
+wheel to zoom, **V** again for the next vantage, then back to orbit. `S` for the simulator works
+there too — the photo is dimmed so the bloom is the LEDs'.
+
+Where the backdrop comes from, best first:
+1. **A 360° photo you take at the spot, at night** (phone photo-sphere, Insta360…). Note the
+   photo's compass heading (`PoseHeadingDegrees` in its metadata, or eyeball it) as `headingDeg`.
+2. **Street View** — `GOOGLE_MAPS_API_KEY=… node src/cli/vox.mjs streetview <lat> <lon> -o streetview/corner`
+   fetches six compass-aligned 90° faces through the official Static API and prints the
+   `vantages:` line to paste (with the panorama's *true* position; Street View cars shoot from ~2.5 m).
+   Daytime, and Google's terms treat it as a working preview, not an asset.
+3. **Mapillary** or any other equirectangular source, as `image:`.
+
+A photo carries no depth, so real buildings don't occlude the piece. If that matters, add a site
+scan or the building's CAD as a scene-level structure (opaque in the simulator). Try it:
+`node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/site.yaml` (its backdrop is a
+compass test pattern — north red, east green, south blue, west yellow).
+

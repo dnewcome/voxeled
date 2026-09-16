@@ -26,6 +26,7 @@ import { createColorInput } from "../../src/input/color-tcp.mjs";
 import { createDDPInput } from "../../src/input/ddp.mjs";
 import { qrEncode, qrToAscii } from "../../src/qr.mjs";
 import { structureRoutes } from "../../src/structures.mjs";
+import { vantageRoutes } from "../../src/site.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = +(process.env.PORT || 8080);
@@ -75,12 +76,14 @@ function apply(doc, { announce = true } = {}) {
   state.doc = doc; state.scene = scene; state.show = show;
   state.dispatcher = (scene.meta.instances || []).some((i) => i.output?.protocol) ? createDispatcher(scene) : null;
   const structRoutes = structureRoutes(scene); // serves the sculpture's CAD; stamps urls (before serializing)
+  const vantRoutes = vantageRoutes(scene); // 360° backdrops for the vantages (site context)
   routes.length = 0;
   routes.push(
     { path: "/scene.json", content: JSON.stringify(scene), contentType: "application/json" },
     { path: "/control", handler: controlHandler },
     { path: "/layout", handler: layoutHandler },
     ...structRoutes,
+    ...vantRoutes,
   );
   state.hub = createHub({ scene, shade, fps: 30, bus, senders: senders() });
   if (!listenPort && !ddpInPort) state.hub.start();

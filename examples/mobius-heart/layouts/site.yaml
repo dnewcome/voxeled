@@ -1,0 +1,30 @@
+# voxeled layout — site context: the two hearts anchored to a real place, with places to STAND.
+# Press V in the viewer to stand at a vantage: the camera goes to that eye, a 360° backdrop wraps
+# around it, and the hearts render over it at the true bearing and size. Drag to look, wheel to zoom.
+# The shipped backdrop is a compass test pattern (north red · east green · south blue · west yellow);
+# replace it with a 360° photo from the spot (`image:`), or fetch Street View there:
+#   GOOGLE_MAPS_API_KEY=… node src/cli/vox.mjs streetview <lat> <lon> -o streetview/corner
+#   → vantages: - { name: corner, lat: …, lon: …, eyeHeightMM: 2500, cube: streetview/corner }
+
+name: site
+units: mm
+site: { lat: 37.7749, lon: -122.4194, headingDeg: 0 }      # origin at this lat/lon; the piece's −Z faces north
+fixtures:
+  heart:
+    type: mobius-heart
+    params: { panelsPerSide: 8, pitchMM: 10, twist: mobius }
+    structures:
+      - { file: "../assets/heart_rails.stl", opacity: 0.35 }
+      - { file: "../assets/heart_rods.stl", opacity: 0.35 }
+instances:
+  - { fixture: heart, name: left, pos: [-1524, 1200, 0] }
+  - { fixture: heart, name: right, pos: [1524, 1200, 0] }
+vantages:
+  - { name: sidewalk, lat: 37.77481, lon: -122.4194, eyeHeightMM: 1600, image: ../assets/pano-compass.png }   # 10 m south, looking north at the hearts
+  - { name: across, pos: [-6000, 1600, 9000], image: ../assets/pano-compass.png, fovDeg: 70 }             # a spot given in mm instead
+show:
+  holdS: 4
+  fadeS: 2.5
+  scenes:
+    - { name: chase, pattern: ribbonChase }
+    - { name: wipe, pattern: worldWipe, params: { axis: 0, space: world } }

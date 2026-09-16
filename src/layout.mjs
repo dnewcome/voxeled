@@ -9,6 +9,7 @@ import { add, matVec, eulerMatrix } from "./vec.mjs";
 import { buildScene } from "./format.mjs";
 import { resolveStructure } from "./structures.mjs";
 import { loadPaths, resolvePath, samplePath } from "./paths.mjs";
+import { resolveSite, resolveVantages } from "./site.mjs";
 
 // instances: [{ name, fixtureName, fixture:{pixels,meta}, pos:[x,y,z]mm, rotDeg:[rx,ry,rz] }]
 // Each instance carries its OWN resolved fixture, so a rig can mix different fixtures.
@@ -157,6 +158,10 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
   });
   for (const s of doc.structures || []) structures.push(resolveStructure(s, { baseDir }));
 
+  // Site context: the geo-anchor and the places a viewer can stand (360° backdrops) — src/site.mjs.
+  const site = resolveSite(doc.site);
+  const vantages = resolveVantages(doc.vantages, { baseDir, site });
+
   const scene = buildSceneFromLayout({
     name: doc.name || "layout",
     units: doc.units || "mm",
@@ -164,6 +169,8 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
     meta: {
       fixtureTypes: Object.fromEntries(Object.entries(fixDefs).map(([k, v]) => [k, v.type])),
       ...(structures.length ? { structures } : {}),
+      ...(site ? { site } : {}),
+      ...(vantages.length ? { vantages } : {}),
     },
   });
 

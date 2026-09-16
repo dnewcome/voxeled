@@ -59,12 +59,13 @@
   <div class="row"><span>Pixels</span><span id="h-count">—</span></div>
   <div class="row"><span>Mode</span><span id="h-mode">dots</span></div>
   <div class="row"><span>Model</span><span id="h-model">—</span></div>
+  <div class="row" id="r-stand" hidden><span>Standing</span><span id="h-stand">—</span></div>
   <div class="row"><span>Bus</span><span id="h-bus"><span class="dot" id="h-dot"></span>waiting…</span></div>
   <div class="row"><span>Frames/s</span><span id="h-fps">—</span></div>
   <hr/>
   <div class="btns" id="view" style="margin-top:0">
     <button id="v-sim" title="S">sim</button><button id="v-bloom" title="B">bloom</button>
-    <button id="v-model" title="M">model</button><button id="v-normals" title="N">normals</button><button id="v-build" title="E">builder</button>
+    <button id="v-model" title="M">model</button><button id="v-normals" title="N">normals</button><button id="v-build" title="E">builder</button><button id="v-stand" title="V — stand at a vantage (site context)" hidden>stand</button>
   </div>
   <hr/>
   <div id="xf">
@@ -175,8 +176,10 @@ addEventListener("resize", () => {
 let scene = null, N = 0, mesh = null, simMesh = null, normalsLines = null;
 let simOn = qs.get("sim") === "1", bloomOn = true, normalsOn = qs.get("normals") === "1"; // view state survives scene rebuilds
 let modelMode = { translucent: 0, opaque: 1, hidden: 2 }[qs.get("model")] ?? (+qs.get("model") || 0); // 0 translucent · 1 opaque · 2 hidden (?model=opaque)
-let framed = false;
+let framed = false, groundGrid = null;
 const structures = [];
+// site context: stand at a vantage (V) — camera at the eye, a 360° photo wrapped around it, LEDs on top
+let standing = null, backdrop = null, look = { bearing: 0, pitch: 0, fov: 60 };
 // per-pixel fixture-local geometry, so an instance can be moved live: p = R·local + pos
 let localP = null, localN = null, bodySize = null, instOf = null;
 const instTf = []; // per instance: { pos:[3], rotDeg:[3], R:[[..]] }
@@ -307,7 +310,7 @@ function buildSceneObjects(sc) {
     const gspan = Math.max(hi[0] - lo[0], hi[2] - lo[2]) * 1.6;
     const ground = new THREE.GridHelper(gspan, Math.max(6, Math.min(40, Math.round(gspan / 500))), 0x33436b, 0x172036);
     ground.position.set(center.x, lo[1], center.z);
-    scene3.add(ground);
+    scene3.add(ground); groundGrid = ground;
     const nbar = [0, 0, 0];
     for (const p of px) { nbar[0] += p.n[0]; nbar[1] += p.n[1]; nbar[2] += p.n[2]; }
     const horiz = Math.hypot(nbar[0], nbar[2]) > 0.05 * N ? [nbar[0], nbar[2]] : [0, 1];
@@ -324,7 +327,12 @@ function buildSceneObjects(sc) {
   }
   applyMode();
   loadStructures(sc);
+  const nv = sc.meta?.vantages?.length || 0;
+  $("v-stand").hidden = !nv; $("r-stand").hidden = !nv;
+  if (standing != null) { if (standing < nv) enterVantage(standing, { keepLook: true }); else leaveVantage(); }
+  else if (!framed_stand && nv && qs.has("stand")) { framed_stand = true; const q = qs.get("stand"); const k = sc.meta.vantages.findIndex((v, i) => v.name === q || String(i) === q); if (k >= 0) enterVantage(k); }
 }
+let framed_stand = false;
 
 // Recompute every pixel of instance k from its fixture-local geometry + the instance transform.
 const _dummy = new THREE.Object3D(), _q = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1), _nv = new THREE.Vector3();
@@ -387,18 +395,96 @@ async function loadStructures(sc) {
   applyMode();
 }
 
+// ── site context: stand at a vantage ─────────────────────────────────────────────
+// A vantage is a place in the world with a 360° backdrop (equirect photo or a compass-aligned
+// n/e/s/w/u/d cubemap, e.g. from `vox streetview`). The backdrop is a huge sphere/box centred on the
+// eye, drawn first with no depth, so the piece, its structures and the simulator render over the
+// photo at the true bearing and size. Compass: local −Z has bearing site.headingDeg.
+const texLoader = new THREE.TextureLoader();
+const CUBE_ROT = { u: Math.PI, d: Math.PI }; // texture rotation for the up/down faces (verified against the compass test pattern)
+const BACKDROP_R = 200000; // 200 m — far inside the far plane, far outside any piece
+function loadTex(url) { return new Promise((ok, err) => texLoader.load(url, (t) => { t.colorSpace = THREE.SRGBColorSpace; ok(t); }, undefined, err)); }
+async function enterVantage(k, { keepLook = false } = {}) {
+  const v = scene.meta.vantages[k];
+  const H = scene.meta.site?.headingDeg || 0;
+  leaveVantage(true);
+  standing = k;
+  if (!keepLook) look = { bearing: +(qs.get("bearing") ?? v.headingDeg), pitch: +(qs.get("pitch") ?? 0), fov: +(qs.get("fov") ?? v.fovDeg) };
+  try {
+    let mesh;
+    if (v.image) {
+      const tex = await loadTex(v.image.url);
+      const geo = new THREE.SphereGeometry(BACKDROP_R, 64, 32); geo.scale(-1, 1, 1); // seen from inside
+      mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, depthWrite: false, depthTest: false, fog: false, toneMapped: false }));
+      mesh.rotation.y = (H - v.headingDeg - 90) * D2R; // centre column (u=.5 → −X after the mirror) faces v.headingDeg
+    } else {
+      const f = v.cube, order = ["e", "w", "u", "d", "s", "n"]; // three.js box faces +x −x +y −y +z −z, with north at −Z
+      const texs = await Promise.all(order.map((face) => loadTex(f[face].url)));
+      texs.forEach((t, i) => { t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1; t.center.set(0.5, 0.5); t.rotation = CUBE_ROT[order[i]] || 0; }); // inside of a box: mirror along u; u/d shot facing north
+      const mats = texs.map((t) => new THREE.MeshBasicMaterial({ map: t, depthWrite: false, depthTest: false, side: THREE.BackSide, fog: false, toneMapped: false }));
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(BACKDROP_R, BACKDROP_R, BACKDROP_R), mats);
+      mesh.rotation.y = H * D2R; // compass-aligned faces → local frame
+    }
+    mesh.renderOrder = -100; mesh.frustumCulled = false; mesh.name = "backdrop";
+    if (standing !== k) { [].concat(mesh.material).forEach((m) => m.dispose()); return; } // user moved on while loading
+    backdrop = mesh; backdrop.position.set(...v.pos);
+    scene3.add(backdrop);
+    console.log("VOXELED_STAND_READY", v.name, look.bearing, look.pitch, look.fov);
+  } catch (e) { console.warn("VOXELED_VANTAGE_FAILED", v.name, e); }
+  camera.position.set(...v.pos);
+  controls.enabled = false;
+  if (groundGrid) groundGrid.visible = false;
+  applyLook();
+  applyMode();
+}
+function leaveVantage(silent = false) {
+  if (backdrop) { scene3.remove(backdrop); backdrop.geometry.dispose(); [].concat(backdrop.material).forEach((m) => { m.map?.dispose(); m.dispose(); }); backdrop = null; }
+  if (standing == null) return;
+  standing = null;
+  camera.fov = 45; camera.updateProjectionMatrix();
+  controls.enabled = true;
+  if (groundGrid) groundGrid.visible = true;
+  // step back out to the orbit: keep the eye where it was, look at the piece
+  controls.update();
+  if (!silent) applyMode();
+}
+// look around: bearing (compass, deg) + pitch, fov by wheel — the camera never leaves the eye
+const _dir = new THREE.Vector3(), _at = new THREE.Vector3();
+function applyLook() {
+  if (standing == null) return;
+  const H = scene.meta.site?.headingDeg || 0, t = (H - look.bearing) * D2R, p = look.pitch * D2R;
+  _dir.set(-Math.sin(t) * Math.cos(p), Math.sin(p), -Math.cos(t) * Math.cos(p)); // bearingToLocal, tilted
+  _at.copy(camera.position).add(_dir); camera.up.set(0, 1, 0); camera.lookAt(_at);
+  camera.fov = look.fov; camera.updateProjectionMatrix();
+  $("h-stand").textContent = `${scene.meta.vantages[standing].name} · ${((look.bearing % 360) + 360) % 360 | 0}° · fov ${look.fov | 0}`;
+}
+let lookDrag = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { if (standing != null && e.button === 0) lookDrag = { x: e.clientX, y: e.clientY, b: look.bearing, p: look.pitch }; });
+addEventListener("pointermove", (e) => {
+  if (!lookDrag) return;
+  const k = look.fov / innerHeight; // degrees per pixel at this zoom
+  look.bearing = lookDrag.b - (e.clientX - lookDrag.x) * k; // drag right → look left, like a photo sphere
+  look.pitch = Math.max(-89, Math.min(89, lookDrag.p + (e.clientY - lookDrag.y) * k));
+  applyLook();
+});
+addEventListener("pointerup", () => (lookDrag = null));
+renderer.domElement.addEventListener("wheel", (e) => { if (standing == null) return; e.preventDefault(); look.fov = Math.max(15, Math.min(110, look.fov * (e.deltaY > 0 ? 1.1 : 0.9))); applyLook(); }, { passive: false });
+function cycleStand() { const n = scene?.meta?.vantages?.length || 0; if (!n) return; if (standing == null) enterVantage(0); else if (standing + 1 < n) enterVantage(standing + 1); else leaveVantage(); }
+
 function applyMode() {
   if (mesh) mesh.visible = !simOn;
   if (simMesh) simMesh.visible = simOn;
   if (normalsLines) normalsLines.visible = normalsOn;
   $("v-sim").classList.toggle("on", simOn); $("v-bloom").classList.toggle("on", simOn && bloomOn); $("v-bloom").disabled = !simOn;
-  $("v-normals").classList.toggle("on", normalsOn); $("v-build").classList.toggle("on", buildOn);
+  $("v-normals").classList.toggle("on", normalsOn); $("v-build").classList.toggle("on", buildOn); $("v-stand").classList.toggle("on", standing != null);
+  if (standing == null) $("h-stand").textContent = "orbit";
   $("v-model").textContent = `model: ${["translucent", "opaque", "hidden"][modelMode]}`; $("v-model").classList.toggle("on", modelMode !== 2);
   const el = $("h-mode");
   el.textContent = simOn ? (bloomOn ? "sim + bloom" : "sim") : "dots";
   el.classList.toggle("sim", simOn);
   if (bloomPass) bloomPass.enabled = bloomOn;
   for (const st of structures) { st.group.visible = modelMode !== 2; for (const m of st.meshes) m.material = simOn ? st.mats.sim : modelMode === 1 ? st.mats.solid : st.mats.glass; }
+  if (backdrop) [].concat(backdrop.material).forEach((m) => m.color.setScalar(simOn ? 0.45 : 1));
   const n = scene?.meta?.structures?.length || 0;
   $("h-model").textContent = n ? `${structures.length}/${n} · ${["translucent", "opaque", "hidden"][modelMode]}` : "—";
 }
@@ -685,6 +771,7 @@ $("v-bloom").addEventListener("click", () => { bloomOn = !bloomOn; applyMode(); 
 $("v-model").addEventListener("click", () => { modelMode = (modelMode + 1) % 3; applyMode(); });
 $("v-normals").addEventListener("click", () => { normalsOn = !normalsOn; applyMode(); });
 $("v-build").addEventListener("click", () => toggleBuilder(!buildOn));
+$("v-stand").addEventListener("click", cycleStand);
 
 addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) { if (e.key === "Escape" || e.key === "Enter") e.target.blur(); return; }
@@ -694,6 +781,7 @@ addEventListener("keydown", (e) => {
   else if (k === "b") { bloomOn = !bloomOn; applyMode(); }
   else if (k === "m") { modelMode = (modelMode + 1) % 3; applyMode(); }
   else if (k === "e") toggleBuilder(!buildOn);
+  else if (k === "v") cycleStand();
   else if (buildOn && k === "t") setGizmoMode("translate");
   else if (buildOn && k === "r" && !$("b-rot").disabled) setGizmoMode("rotate");
   else if (buildOn && k === "escape") deselect();
@@ -705,7 +793,7 @@ addEventListener("keydown", (e) => {
 
 function loop() {
   requestAnimationFrame(loop);
-  controls.update();
+  if (standing == null) controls.update(); // OrbitControls.update() re-places the camera — never while standing at a vantage
   const now = performance.now();
   if (now - lastFpsT > 500) { $("h-fps").textContent = Math.round((frameCount * 1000) / (now - lastFpsT)); frameCount = 0; lastFpsT = now; }
   if (simOn && composer) composer.render(); else renderer.render(scene3, camera);
