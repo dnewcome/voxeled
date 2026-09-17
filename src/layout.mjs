@@ -29,6 +29,7 @@ export function buildSceneFromLayout({ name, units = "mm", instances, meta = {} 
         n: n.map((x) => +x.toFixed(4)),
         s: lp.s,
         v: lp.v,
+        ...(lp.strand != null ? { strand: lp.strand } : {}), // keep the run id (ropes, importers) through the flatten
       });
     }
   });
