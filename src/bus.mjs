@@ -45,7 +45,37 @@ const encodeBinary = (payload) => encodeFrame(payload, 0x2);
 const encodeText = (str) => encodeFrame(Buffer.from(str, "utf8"), 0x1);
 
 // routes: [{ path, file?, content?, contentType }]. `content` may be a Buffer/string served from memory.
-export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir = null } = {}) {
+// Decode client→server frames (masked per RFC 6455). Handles frames split across TCP chunks and
+// fragmented messages; ping → pong; close → close. Calls onFrame(opcode, payload) per message.
+function frameParser(onFrame) {
+  let buf = Buffer.alloc(0), frag = null, fragOp = 0;
+  return (chunk) => {
+    buf = buf.length ? Buffer.concat([buf, chunk]) : chunk;
+    for (;;) {
+      if (buf.length < 2) return;
+      const fin = buf[0] & 0x80, op = buf[0] & 0x0f, masked = buf[1] & 0x80;
+      let len = buf[1] & 0x7f, o = 2;
+      if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); o = 4; }
+      else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); o = 10; }
+      const need = o + (masked ? 4 : 0) + len;
+      if (buf.length < need) return;
+      let payload = buf.subarray(o + (masked ? 4 : 0), need);
+      if (masked) { const k = buf.subarray(o, o + 4), out = Buffer.allocUnsafe(len); for (let i = 0; i < len; i++) out[i] = payload[i] ^ k[i & 3]; payload = out; }
+      else payload = Buffer.from(payload);
+      buf = buf.subarray(need);
+      if (op === 0x0 || (!fin && (op === 0x1 || op === 0x2))) { // fragment
+        if (op !== 0x0) { frag = [payload]; fragOp = op; } else frag?.push(payload);
+        if (fin && frag) { onFrame(fragOp, Buffer.concat(frag)); frag = null; }
+        continue;
+      }
+      onFrame(op, payload);
+    }
+  };
+}
+
+// onMessage({ socket, binary }) for binary client messages, onMessage({ socket, text }) for text —
+// how a page pushes frames (raw RGB or Art-Net packets) and control JSON into the hub.
+export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir = null, onMessage = null } = {}) {
   const clients = new Set();
   const staticRoot = staticDir ? path.resolve(staticDir) : null;
 
@@ -102,8 +132,12 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir
     const drop = () => clients.delete(socket);
     socket.on("close", drop);
     socket.on("error", drop);
-    // Respond to a client close frame (opcode 0x8) by ending; otherwise ignore inbound data.
-    socket.on("data", (buf) => { if ((buf[0] & 0x0f) === 0x8) socket.end(); });
+    socket.on("data", frameParser((op, payload) => {
+      if (op === 0x8) { try { socket.write(encodeFrame(Buffer.alloc(0), 0x8)); } catch {} socket.end(); }
+      else if (op === 0x9) { if (socket.writable) socket.write(encodeFrame(payload, 0xa)); }
+      else if (op === 0x2 && onMessage) { try { onMessage({ socket, binary: payload }); } catch (e) { console.warn("bus: message handler", e.message); } }
+      else if (op === 0x1 && onMessage) { try { onMessage({ socket, text: payload.toString("utf8") }); } catch (e) { console.warn("bus: message handler", e.message); } }
+    }));
   });
 
   server.listen(port);
@@ -122,9 +156,13 @@ export function createBus({ port = 8080, wsPath = "/bus", routes = [], staticDir
 
   // The LAN address — what a phone on the same Wi-Fi can reach (first non-internal IPv4).
   const lanIp = Object.values(os.networkInterfaces()).flat().find((i) => i && i.family === "IPv4" && !i.internal)?.address;
+  // Text to ONE client (a reply / status to whoever sent something).
+  const sendText = (socket, obj) => { if (socket.writable) socket.write(encodeText(typeof obj === "string" ? obj : JSON.stringify(obj))); };
+
   return {
     broadcast,
     broadcastText,
+    sendText,
     clients,
     server,
     url: `http://localhost:${port}/`,

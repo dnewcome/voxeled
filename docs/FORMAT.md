@@ -86,6 +86,27 @@ written once in voxeled, so every consumer (including the TiXL bridge) gets it f
 Mixed-protocol demo (Art-Net + dan-mx + DDP from one show):
 `node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/patched.yaml`.
 
+## Inputs — external streams driving the piece (the patch, receiving end)
+
+```yaml
+inputs:
+  - { name: console, protocol: artnet, port: 6454, priority: 100, timeoutMs: 800, map: { strings: 12, universesPerString: 4, perUniverse: 150, stripB: doc } }
+  - { name: web, protocol: ws, priority: 10 }
+merge: { mode: priority, fallback: show, timeoutMs: 1000 }
+```
+
+| field | default | meaning |
+|---|---|---|
+| `protocol` | — | `artnet` (6454) · `sacn` (5568) · `ddp` (4048) · `tcp` (9600) · `ws` (the bus) |
+| `name`, `port`, `host` | protocol, standard port, 0.0.0.0 | one `ws` input at most |
+| `priority`, `timeoutMs` | 0, `merge.timeoutMs` | who wins; when a silent source hands its pixels back |
+| `map` | sequential 170/universe | artnet/sacn/ws: `segments: […]` or `strings: N, universesPerString, perUniverse, perString, stripB, flip, groups: { size, order }, universe, pixel` |
+| `universes` | the map's | sacn: multicast groups to join |
+| `merge.mode` | `priority` | `priority` · `htp` · `ltp` |
+| `merge.fallback` | `show` | `show` · `black` · `hold` for pixels no live source covers |
+
+Details and the wire behaviour: [interop/protocols.md](interop/protocols.md#inputs-and-merge--several-streams-driving-one-piece).
+
 ## Emitter — how the LEDs emit (simulation)
 
 The map says where each LED is and which way it faces; the **emitter profile** says how it *emits*,

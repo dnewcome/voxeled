@@ -3,7 +3,9 @@
 // and each protocol sender. Preview == output because they are literally the same bytes.
 import { sub, matVec, eulerMatrix, transpose3 } from "./vec.mjs";
 
-export function createHub({ scene, shade, pattern, fps = 30, bus = null, senders = [] } = {}) {
+// `sources` (src/input/sources.mjs): live external streams merged over the internal show — the
+// pattern renders only for the pixels no live source covers.
+export function createHub({ scene, shade, pattern, fps = 30, bus = null, senders = [], sources = null } = {}) {
   const render = shade ?? pattern; // `shade` is the general name; `pattern` kept for one-pattern use
   const N = scene.pixels.length;
   const rgb = new Uint8Array(N * 3); // the normalized frame: flat RGB, 0..255
@@ -23,15 +25,20 @@ export function createHub({ scene, shade, pattern, fps = 30, bus = null, senders
 
   const ctx = { scene, instances: inst, local, t: 0, frame: 0 };
 
-  function renderFrame(t) {
+  let last = null; // what compose reported last tick (which sources were live, coverage)
+  function renderBase(out, t) {
     ctx.t = t;
     ctx.frame = frames;
     for (let k = 0; k < N; k++) {
       const c = render(scene.pixels[k], t, ctx);
-      rgb[k * 3] = to255(c[0]);
-      rgb[k * 3 + 1] = to255(c[1]);
-      rgb[k * 3 + 2] = to255(c[2]);
+      out[k * 3] = to255(c[0]);
+      out[k * 3 + 1] = to255(c[1]);
+      out[k * 3 + 2] = to255(c[2]);
     }
+  }
+  function renderFrame(t) {
+    if (sources) last = sources.compose(rgb, (out) => renderBase(out, t));
+    else renderBase(rgb, t);
     bus?.broadcast(rgb);
     for (const s of senders) s.send(rgb);
     frames++;
@@ -47,5 +54,6 @@ export function createHub({ scene, shade, pattern, fps = 30, bus = null, senders
     },
     stop() { if (timer) clearInterval(timer); timer = null; },
     get frames() { return frames; },
+    get merge() { return last; },
   };
 }

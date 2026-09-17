@@ -60,6 +60,7 @@
   <div class="row"><span>Mode</span><span id="h-mode">dots</span></div>
   <div class="row"><span>Model</span><span id="h-model">—</span></div>
   <div class="row" id="r-stand" hidden><span>Standing</span><span id="h-stand">—</span></div>
+  <div class="row" id="r-inputs" hidden title="external streams merged over the show (layout inputs:)"><span>Inputs</span><span id="h-inputs">—</span></div>
   <div class="row"><span>Bus</span><span id="h-bus"><span class="dot" id="h-dot"></span>waiting…</span></div>
   <div class="row"><span>Frames/s</span><span id="h-fps">—</span></div>
   <hr/>
@@ -327,6 +328,7 @@ function buildSceneObjects(sc) {
   }
   applyMode();
   loadStructures(sc);
+  $("r-inputs").hidden = !(sc.meta?.inputs?.length);
   const nv = sc.meta?.vantages?.length || 0;
   $("v-stand").hidden = !nv; $("r-stand").hidden = !nv;
   if (standing != null) { if (standing < nv) enterVantage(standing, { keepLook: true }); else leaveVantage(); }
@@ -488,6 +490,15 @@ function applyMode() {
   const n = scene?.meta?.structures?.length || 0;
   $("h-model").textContent = n ? `${structures.length}/${n} · ${["translucent", "opaque", "hidden"][modelMode]}` : "—";
 }
+
+// ── inputs: which external streams are live (polled; the merge happens in the hub) ───────────
+setInterval(async () => {
+  if (!scene?.meta?.inputs?.length) return;
+  try {
+    const st = await (await fetch("inputs")).json();
+    $("h-inputs").innerHTML = st.inputs.map((i) => `<span style="color:${i.live ? "#6f6" : "#888"}">${i.name}${i.live ? ` ${i.rate}/s` : ""}</span>`).join(" · ") + ` <span style="color:#888">(${st.mode})</span>`;
+  } catch {}
+}, 1000);
 
 // ── boot + live reload ─────────────────────────────────────────────────────────
 async function loadScene() { return (await fetch("scene.json")).json(); }

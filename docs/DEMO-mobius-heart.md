@@ -108,8 +108,8 @@ YAML, not env vars. What remains as env:
 | `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` \| `spotlight` \| `projector` |
 | `ARTNET` | — | host to stream Art-Net to (e.g. `192.168.1.50`) |
 | `DDP` | — | host to stream DDP to (e.g. `192.168.1.60`) |
-| `VOX_LISTEN` | — | TCP port to receive colors from an external source (e.g. TiXL's `VoxeledOutput`); pauses the internal show and drives fixtures + preview from incoming frames |
-| `VOX_DDP_IN` | — | UDP port (4048) on which voxeled is a native **DDP Display** — xLights / FPP / LedFx / Chromatik / WLED-style senders drive the preview, simulator and patch (DDP in → any protocol out). See [`interop/protocols.md`](interop/protocols.md#voxeled-as-a-ddp-display-receiver) |
+| `VOX_LISTEN` | — | TCP port to receive colors from an external source (e.g. TiXL's `VoxeledOutput`); merges over the internal show at priority 100 (the layout's `inputs:` block is the full form — several sources at once, see `docs/interop/protocols.md`) |
+| `VOX_DDP_IN` | — | UDP port (4048) on which voxeled is a native **DDP Display** — xLights / FPP / LedFx / Chromatik / WLED-style senders drive the preview, simulator and patch (DDP in → any protocol out), merged over the show. See [`interop/protocols.md`](interop/protocols.md#voxeled-as-a-ddp-display-receiver) |
 
 ```bash
 VOX_LAYOUT=examples/mobius-heart/layouts/grid-3x3.yaml node examples/mobius-heart/run.mjs      # 3×3 matrix, 9 hearts

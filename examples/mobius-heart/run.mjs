@@ -22,8 +22,7 @@ import { PATTERNS } from "../../src/patterns.mjs";
 import { createArtNetSender } from "../../src/senders/artnet.mjs";
 import { createDDPSender } from "../../src/senders/ddp.mjs";
 import { createDispatcher } from "../../src/output/dispatch.mjs";
-import { createColorInput } from "../../src/input/color-tcp.mjs";
-import { createDDPInput } from "../../src/input/ddp.mjs";
+import { createInputs } from "../../src/input/index.mjs";
 import { qrEncode, qrToAscii } from "../../src/qr.mjs";
 import { structureRoutes } from "../../src/structures.mjs";
 import { vantageRoutes } from "../../src/site.mjs";
@@ -46,8 +45,11 @@ if (process.env.VOX_PATTERN && !single) {
   console.error(`unknown pattern "${process.env.VOX_PATTERN}". options: ${Object.keys(PATTERNS).join(", ")}`);
   process.exit(1);
 }
-const listenPort = process.env.VOX_LISTEN ? +process.env.VOX_LISTEN : 0;   // TCP colour input (TiXL)
-const ddpInPort = process.env.VOX_DDP_IN ? +process.env.VOX_DDP_IN : 0;    // native DDP Display
+// Env shorthands for inputs (the layout's `inputs:` is the full form): TCP colour input (TiXL),
+// native DDP Display. They merge like any other input (priority 100, so they win over the show).
+const envInputs = [];
+if (process.env.VOX_LISTEN) envInputs.push({ name: "tcp", protocol: "tcp", port: +process.env.VOX_LISTEN, priority: 100 });
+if (process.env.VOX_DDP_IN) envInputs.push({ name: "ddp", protocol: "ddp", port: +process.env.VOX_DDP_IN, priority: 100 });
 
 // Senders from the environment persist across layout reloads; the patch dispatcher is per scene.
 const envSenders = [];
@@ -55,7 +57,7 @@ if (process.env.ARTNET) envSenders.push(createArtNetSender({ host: process.env.A
 if (process.env.DDP) envSenders.push(createDDPSender({ host: process.env.DDP }));
 
 // ── the live layout: doc → scene + show + hub, rebuilt on every edit ──────────────
-const state = { doc: null, header: "", scene: null, show: null, hub: null, dispatcher: null, lastWritten: null };
+const state = { doc: null, header: "", scene: null, show: null, hub: null, dispatcher: null, inputs: null, lastWritten: null };
 const routes = []; // mutated in place on every apply — the bus reads it per request
 const senders = () => (state.dispatcher ? [...envSenders, state.dispatcher] : envSenders);
 
@@ -73,8 +75,13 @@ function apply(doc, { announce = true } = {}) {
   const { scene, show, shade } = build(doc);
   state.hub?.stop();
   state.dispatcher?.close();
+  state.inputs?.close();
   state.doc = doc; state.scene = scene; state.show = show;
   state.dispatcher = (scene.meta.instances || []).some((i) => i.output?.protocol) ? createDispatcher(scene) : null;
+  // Inputs: the layout's `inputs:` + env shorthands, merged per `merge:` (rebound on every reload).
+  const inputSpecs = [...(scene.meta.inputs || []), ...envInputs.filter((e) => !(scene.meta.inputs || []).some((i) => i.name === e.name))];
+  state.inputs = inputSpecs.length ? createInputs({ specs: inputSpecs, merge: scene.meta.merge, scene, bus, onControl: (m) => { for (const k of ["mode", "fader", "a", "b"]) if (m[k] != null) applyControl(k, String(m[k])); } }) : null;
+  scene.meta.inputs = inputSpecs;
   const structRoutes = structureRoutes(scene); // serves the sculpture's CAD; stamps urls (before serializing)
   const vantRoutes = vantageRoutes(scene); // 360° backdrops for the vantages (site context)
   routes.length = 0;
@@ -82,20 +89,24 @@ function apply(doc, { announce = true } = {}) {
     { path: "/scene.json", content: JSON.stringify(scene), contentType: "application/json" },
     { path: "/control", handler: controlHandler },
     { path: "/layout", handler: layoutHandler },
+    { path: "/inputs", handler: (req, res) => { res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" }); res.end(JSON.stringify(state.inputs ? state.inputs.status() : { inputs: [] })); } },
     ...structRoutes,
     ...vantRoutes,
   );
-  state.hub = createHub({ scene, shade, fps: 30, bus, senders: senders() });
-  if (!listenPort && !ddpInPort) state.hub.start();
+  state.hub = createHub({ scene, shade, fps: 30, bus, senders: senders(), sources: state.inputs?.sources || null });
+  state.hub.start();
   if (announce) bus.broadcastText({ type: "scene", count: scene.count, instances: scene.meta.instances.length });
 }
 
 // Control endpoint: the viewer's / phone's crossfader + auto toggle drive `control`.
+function applyControl(k, v) {
+  if (k === "mode") control.mode = v === "manual" ? "manual" : "auto";
+  else if (k === "fader") control.fader = Math.max(0, Math.min(1, +v));
+  else if (k === "a") control.a = +v;
+  else if (k === "b") control.b = +v;
+}
 function controlHandler(req, res, params) {
-  if (params.has("mode")) control.mode = params.get("mode") === "manual" ? "manual" : "auto";
-  if (params.has("fader")) control.fader = Math.max(0, Math.min(1, +params.get("fader")));
-  if (params.has("a")) control.a = +params.get("a");
-  if (params.has("b")) control.b = +params.get("b");
+  for (const k of ["mode", "fader", "a", "b"]) if (params.has(k)) applyControl(k, params.get(k));
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(control));
 }
@@ -130,7 +141,7 @@ function layoutHandler(req, res, params) {
 }
 
 // ── boot ─────────────────────────────────────────────────────────────────────────
-const bus = createBus({ port: PORT, staticDir: path.join(HERE, "../../viewer"), routes });
+const bus = createBus({ port: PORT, staticDir: path.join(HERE, "../../viewer"), routes, onMessage: (m) => state.inputs?.onMessage(m) }); // pages push frames / control in through the same socket
 bus.server.on("error", (e) => {
   if (e.code === "EADDRINUSE") { console.error(`\n✗ port ${PORT} is already in use — another demo is likely running. Stop it, or run with PORT=<n>.`); process.exit(1); }
   throw e;
@@ -165,15 +176,6 @@ try {
   });
 } catch { /* watching is best-effort */ }
 
-// Drive modes: external frames replace the internal show.
-const external = (rgb) => { bus.broadcast(rgb); for (const s of senders()) s.send(rgb); };
-let input = null, ddpIn = null;
-if (listenPort) input = createColorInput({ port: listenPort, onFrame: external });
-if (ddpInPort) {
-  ddpIn = createDDPInput({ port: ddpInPort, pixelCount: state.scene.count, name: state.scene.name, onFrame: external });
-  ddpIn.sock.on("error", (e) => { console.error(e.code === "EADDRINUSE" ? `\n✗ udp port ${ddpInPort} is already in use (another DDP receiver?)` : `\n✗ ddp input: ${e.message}`); process.exit(1); });
-}
-
 const { scene, show } = state;
 console.log(`♥ voxeled — Möbius LED Heart demo`);
 console.log(`  layout:  ${rel} — "${scene.name}"  (live: edit the file, or build in the viewer with E)`);
@@ -183,8 +185,11 @@ const outDesc = senders().length
   ? senders().map((s) => (s.kind === "dispatch" ? `patch[${s.summary.join(", ")}]` : `${s.kind}→${s.target}`)).join("  ")
   : "none (set ARTNET=host / DDP=host, or add per-fixture `output` in the layout)";
 console.log(`  output:  ${outDesc}`);
-if (listenPort) console.log(`  input:   tcp ${listenPort}  (driven externally — internal show paused)`);
-if (ddpInPort) console.log(`  input:   DDP udp ${ddpInPort}  — voxeled is a DDP Display ("${scene.name}", ${scene.count.toLocaleString()} px, ID 1); point any DDP sender here (internal show paused)`);
+if (state.inputs) {
+  const m = state.inputs.sources;
+  console.log(`  inputs:  ${state.inputs.list.map((i) => `${i.name} (${i.protocol}${i.port ? " " + i.port : ""}, prio ${i.priority}${i.universes ? `, ${i.universes} universes` : ""}${i.covered < scene.count ? `, ${i.covered} px` : ""})`).join("  ·  ")}`);
+  console.log(`           merge: ${m.mode} · fallback ${m.fallback} — the internal show runs wherever no input is live`);
+}
 console.log(`  viewer:  ${bus.url}`);
 // Public interaction, LAN edition: a phone on the same Wi-Fi scans this and gets the scene
 // picker + crossfader (viewer/phone.html on the hub's /control seam). Hosted is the same seam.
@@ -195,8 +200,7 @@ if (bus.lanUrl && !process.env.VOX_NO_QR) {
 
 process.on("SIGINT", () => {
   state.hub?.stop();
-  input?.close();
-  ddpIn?.close();
+  state.inputs?.close();
   bus.close();
   for (const s of senders()) s.close();
   console.log("\nbye");

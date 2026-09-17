@@ -137,7 +137,7 @@ patch, one protocol per fixture as needed ([interop/protocols.md](interop/protoc
 | geometry on-ramp | built-in primitives | hand-typed / camera | import per tool | canvas placement | GDTF/MVR/CAD | **CAD chips · Blender · Grasshopper · glTF · LX · ropes** |
 | patch (mixed protocols, byte order, universes) | good | per-tool outputs | weak | excellent | excellent | good — Art-Net · DDP · dan-mx, per fixture |
 | other tools perform through it | — | OSC | *they* are the performer | video in | — | **yes: TCP, DDP in, phone; glTF out** |
-| show control (cues, timecode, priority, failover) | — | modulators, OSC | — | some | **yes** | **not yet** |
+| show control (cues, timecode, priority, failover) | — | modulators, OSC | — | some | **yes** | priority/merge/failover ✅ · cues, timecode not yet |
 | open | ✅ | ✅ | mixed | ❌ | ❌ | ✅ MIT |
 
 So: voxeled is the **open house system for an LED piece** — the layer between *how the piece is
@@ -157,8 +157,9 @@ Being honest about "pro show control", since none of the open tools are one:
   able to *drive* the show so voxeled locks to a production's master.
 - **No OSC / MIDI surface.** The `/control` seam takes HTTP today; OSC in (and out, for feedback)
   is what a console, QLab, or a MIDI controller expects.
-- **No sACN priority / merging, no failover.** A pro rig runs a backup source; sACN priority and
-  HTP/LTP merge decide who wins. Also a watchdog "hold last frame / fallback show" on input loss.
+- ~~No priority / merging, no failover.~~ Landed: `inputs:` + `merge:` — Art-Net, sACN, DDP, TCP and
+  WebSocket sources at once, per-pixel priority / HTP / LTP, per-source timeouts, fallback to the
+  show / black / hold ([interop/protocols.md](interop/protocols.md#inputs-and-merge--several-streams-driving-one-piece)).
 - **No output redundancy or health.** Per-node liveness, RDM/DDP status queries surfaced in the UI.
 
 None of these conflict with the design — they sit on the hub's control seam and the mixer — and the

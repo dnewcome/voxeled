@@ -26,6 +26,7 @@ example (the Thread sculpture). The short docs each cover one part; this is the 
 | **emitter** | how a fixture's LEDs *emit* (viewing angle, body size, diffusion…) — what the simulator renders. |
 | **patch / output** | where a fixture's pixels are sent: protocol + address (Art-Net universe, DDP offset, dan-mx…). Per fixture or per instance; one installation can mix protocols. |
 | **show** | the scenes (pattern + params) the hub crossfades between. |
+| **input** | an external stream that drives pixels — Art-Net, sACN, DDP, TCP, or a page on the bus — with a priority and a timeout; several run at once and **merge** over the show. |
 | **baked** | evaluated and stored as a plain list of pixels — no recipe left inside. A `.vxl.json` is baked; a `rope` or `array` in a layout is procedural. See [§8](#8-baking-and-export). |
 
 Two modes, one artifact: **show control** plays a finished scene; the **builder** authors it — and both use the same layout file.
@@ -149,6 +150,24 @@ See [interop/protocols.md](interop/protocols.md) for the protocol family.
 `planeSweep` (`speedMM`, `spacingMM`, `widthMM`, `hue`), `normalRGB`, `spotlight` (visibility from an orbiting
 camera: `orbitDegPerSec`, `angleDeg`, `elevDeg`, `fovDeg`), `projector` (projection-map a texture). A pattern
 is `(pixel, t, ctx) → [r, g, b]` over the pixel's world position/normal — add your own in `patterns.mjs`.
+
+### 3.6 Inputs and merge
+
+Other tools drive the piece *through* voxeled — several at once:
+
+```yaml
+inputs:
+  - { name: console, protocol: artnet, priority: 100, timeoutMs: 800, map: { strings: 12, universesPerString: 4, perUniverse: 150, stripB: doc } }
+  - { name: tixl,    protocol: tcp,  priority: 80 }
+  - { name: web,     protocol: ws,   priority: 10 }      # any page pushes frames or Art-Net over the bus
+merge: { mode: priority, fallback: show }
+```
+
+Per pixel, the highest-priority live source wins (`htp` / `ltp` also available); a source that
+stops for `timeoutMs` hands its pixels back; pixels nobody covers run the internal show. The
+`map` on a universe protocol is the receiving end of the patch — see
+[interop/protocols.md](interop/protocols.md#inputs-and-merge--several-streams-driving-one-piece).
+The HUD's *Inputs* row and `/inputs` show what's live.
 
 ## 4. Getting geometry in
 
@@ -275,7 +294,7 @@ npm run demo                                             # examples/mobius-heart
 node examples/mobius-heart/run.mjs path/to/layout.yaml   # any layout (VOX_LAYOUT=… also works)
 VOX_PATTERN=spotlight npm run demo                       # one pattern instead of the show
 ARTNET=10.0.0.5 DDP=10.0.0.6 npm run demo                # simple whole-frame senders; the layout's `output` patch drives mixed protocols
-VOX_DDP_IN=4048 npm run demo                             # voxeled is a DDP Display: xLights/FPP/LedFx drive it (DDP in → any protocol out)
+VOX_DDP_IN=4048 npm run demo                             # voxeled is a DDP Display: xLights/FPP/LedFx drive it (DDP in → any protocol out); the layout's inputs: is the full form
 VOX_LISTEN=9600 npm run demo                             # TCP colour input (TiXL's VoxeledOutput)
 PORT=9000 VOX_NO_QR=1 npm run demo                       # port; hide the phone QR
 ```

@@ -63,6 +63,46 @@ ignored (immediate display); storage-sourced data and DMX transit (254) are acce
 (The web page can't do this itself — browsers have no UDP — which is exactly why the hub is the
 native DDP endpoint and the web app is its face.)
 
+## Inputs and merge — several streams driving one piece
+
+Everything that can send pixels can drive voxeled, *at the same time*, the way a pro rig merges
+sources. The layout's `inputs:` lists the streams; `merge:` says how they combine:
+
+```yaml
+inputs:
+  - { name: console, protocol: artnet, port: 6454, priority: 100, timeoutMs: 800,
+      map: { strings: 12, universesPerString: 4, perUniverse: 150, stripB: doc, groups: { size: 3, order: [0, 1, 2, 3] } } }
+  - { name: xlights, protocol: ddp,  port: 4048, priority: 60 }         # whole frames in scene order
+  - { name: tixl,    protocol: tcp,  port: 9600, priority: 80 }         # length-prefixed frames (TiXL VoxeledOutput)
+  - { name: desk,    protocol: sacn, port: 5568, priority: 90, universes: [1, 2, 3] }   # E1.31, joins the multicast groups
+  - { name: web,     protocol: ws,   priority: 10 }                     # the bus: pages push frames / Art-Net / JSON
+merge: { mode: priority, fallback: show, timeoutMs: 1000 }
+```
+
+| | |
+|---|---|
+| `priority` | per pixel, the highest-priority **live** source that has written it wins |
+| `htp` / `ltp` | highest-takes-precedence (per-channel max) / latest-takes-precedence (most recent write) |
+| `timeoutMs` | a source with no data for this long goes silent and hands its pixels back — the failover |
+| `fallback` | for pixels no live source covers: `show` (the internal patterns keep running there), `black`, or `hold` |
+
+Universe protocols (Art-Net, sACN) go through an **input map** — the receiving end of the patch —
+which says which pixel each channel *is*: sequential (170 px per universe, default), explicit
+`segments: [{ universe, channel, pixel, count, dir }]`, or the `strings:` form every pixel
+controller has, with the two things that always bite made explicit: a string wired as two strips
+from both ends (`stripB: doc | luxpi | none`) and the controller's string order versus the
+layout's (`groups.order`), plus `flip`. Wrong guesses become one-line edits instead of code.
+
+The hub answers **ArtPoll** (so consoles and senders discover it as a node) and joins sACN
+multicast. The **bus** is also an input: a WebSocket client may send binary messages — a raw RGB
+frame in scene order, or Art-Net packets (a relay page) — and JSON text: `{ "type": "control",
+fader, mode, a, b }` drives the crossfader; any other JSON (a game's pedestal buttons, state) is
+relayed to every other client, so the bus is the room the pages share. `/inputs` reports each
+source's liveness and rate; the viewer's HUD shows it.
+
+`VOX_LISTEN=<port>` / `VOX_DDP_IN=<port>` are shorthands that add a `tcp` / `ddp` input at
+priority 100 — they now merge over the show instead of replacing it.
+
 ## dan-mx — the opinionated dialect
 
 [dan-mx](https://github.com/dnewcome/dan-mx) is the same pixel-streaming idea as DDP, redesigned with

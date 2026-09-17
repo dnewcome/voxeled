@@ -161,6 +161,9 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
   // Site context: the geo-anchor and the places a viewer can stand (360° backdrops) — src/site.mjs.
   const site = resolveSite(doc.site);
   const vantages = resolveVantages(doc.vantages, { baseDir, site });
+  // Inputs: external streams that drive the piece, merged by priority/htp/ltp (src/input/index.mjs).
+  const inputs = resolveInputs(doc.inputs);
+  const merge = doc.merge ? { mode: doc.merge.mode || "priority", fallback: doc.merge.fallback || "show", timeoutMs: doc.merge.timeoutMs ?? 1000 } : undefined;
 
   const scene = buildSceneFromLayout({
     name: doc.name || "layout",
@@ -171,6 +174,8 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
       ...(structures.length ? { structures } : {}),
       ...(site ? { site } : {}),
       ...(vantages.length ? { vantages } : {}),
+      ...(inputs.length ? { inputs } : {}),
+      ...(merge ? { merge } : {}),
     },
   });
 
@@ -186,3 +191,22 @@ export function resolveLayout(doc, { fixtures = {}, patterns = {}, baseDir = nul
 
   return { scene, show };
 }
+
+export const INPUT_PROTOCOLS = { artnet: 6454, sacn: 5568, ddp: 4048, tcp: 9600, ws: null };
+export function resolveInputs(list) {
+  const seen = new Set();
+  return (list || []).map((inp, i) => {
+    const protocol = inp.protocol;
+    if (!(protocol in INPUT_PROTOCOLS)) throw new Error(`input #${i}: protocol must be one of ${Object.keys(INPUT_PROTOCOLS).join(", ")} (got "${protocol}")`);
+    const name = inp.name || protocol;
+    if (seen.has(name)) throw new Error(`duplicate input name "${name}"`);
+    seen.add(name);
+    const out = { name, protocol, priority: inp.priority ?? 0, ...(inp.timeoutMs != null ? { timeoutMs: inp.timeoutMs } : {}) };
+    if (protocol !== "ws") out.port = inp.port || INPUT_PROTOCOLS[protocol];
+    if (inp.host) out.host = inp.host;
+    if (protocol === "artnet" || protocol === "sacn" || protocol === "ws") out.map = inp.map || {};
+    if (protocol === "sacn" && inp.universes) out.universes = inp.universes;
+    return out;
+  });
+}
+
