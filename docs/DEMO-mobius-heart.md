@@ -114,6 +114,7 @@ YAML, not env vars. What remains as env:
 ```bash
 VOX_LAYOUT=examples/mobius-heart/layouts/grid-3x3.yaml node examples/mobius-heart/run.mjs      # 3×3 matrix, 9 hearts
 VOX_LAYOUT=examples/mobius-heart/layouts/facing-hearts.yaml node examples/mobius-heart/run.mjs # 4 hearts, alternating 180°
+node examples/mobius-heart/run.mjs examples/mobius-heart/layouts/columns.yaml        # 8 rolled-panel columns on a floor (type: tube)
 VOX_PATTERN=worldWipe node examples/mobius-heart/run.mjs           # one pattern, no crossfade
 ARTNET=192.168.1.50 node examples/mobius-heart/run.mjs             # + drive real Art-Net fixtures
 ```

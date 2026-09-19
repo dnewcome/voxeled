@@ -93,6 +93,7 @@ show:
 | `mesh` | `file`, `scaleToMM` (1), `normalSign` (`outward`\|`inward`\|`+x…-z`), `order` (`chain`\|`file`), `minTris`, `maxTris`, `emitter` | **chip-island import** of a CAD mesh whose LED chips are bodies (STL/OBJ/GLB): one LED per island, thin axis = normal, order by chaining ([§4](#4-getting-geometry-in)) |
 | `vxl` | `file`, `emitter` | a **baked** `.vxl.json` (Blender/Grasshopper export, `vox import`, `export.mjs`). Brings any structures the file carries ([§8](#8-baking-and-export)) |
 | `gltf` | `file`, `scaleToMM` (1000) | glTF/GLB points or mesh vertices with `NORMAL` (else estimated) |
+| `tube` | `cols` (8), `rows` (32), `panels` (1), `pitchMM` (10), `seamMM`, `panelGapMM`, `diameterMM`, `wiring` (`across`\|`along`), `serpentine`, `startAngleDeg`, `clockwise` | a **flexible matrix panel rolled into a column**: the short side around (Ø = (cols·pitch + seam)/π), panels end to end along +Y from the base, radial normals, the panel's serpentine wiring as data order (`layouts/columns.yaml`) |
 | `rope` | `path`, `count` **or** `pitchMM`, `radiusMM`, `angleDeg` (number or list), `angleFrom`, `twistDegPerM`, `startMM`, `endMM`, `up` | LEDs along a path, offset and wrapped around it, normals radial ([§6](#6-placing-leds-on-a-structure-paths-and-ropes)) |
 
 Add your own in `examples/mobius-heart/fixtures.mjs` — a `(params) => { pixels, meta }` function.
