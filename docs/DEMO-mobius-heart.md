@@ -105,7 +105,7 @@ YAML, not env vars. What remains as env:
 | var | default | effect |
 |---|---|---|
 | `VOX_LAYOUT` | `…/layouts/two-hearts.yaml` | which YAML layout to load |
-| `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` \| `spotlight` \| `projector` |
+| `VOX_PATTERN` | — | run ONE pattern instead of the show: `ribbonChase` \| `worldWipe` \| `planeSweep` \| `normalRGB` \| `spotlight` \| `projector` \| `helix` \| `lantern` \| `swirl` \| `drops` |
 | `ARTNET` | — | host to stream Art-Net to (e.g. `192.168.1.50`) |
 | `DDP` | — | host to stream DDP to (e.g. `192.168.1.60`) |
 | `VOX_LISTEN` | — | TCP port to receive colors from an external source (e.g. TiXL's `VoxeledOutput`); merges over the internal show at priority 100 (the layout's `inputs:` block is the full form — several sources at once, see `docs/interop/protocols.md`) |

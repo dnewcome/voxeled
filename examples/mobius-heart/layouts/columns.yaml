@@ -21,9 +21,12 @@ instances:
   - { fixture: column, name: c6, pos: [-1300, 0, 2500],  output: { universe: 30 } }
   - { fixture: column, name: c7, pos: [1400, 0, 3000],   output: { universe: 35 } }
 show:
-  holdS: 5
+  holdS: 6
   fadeS: 2.5
   scenes:
-    - { name: planes rising (world),  pattern: planeSweep, params: { speedMM: 400, spacingMM: 1200, widthMM: 250 } }
-    - { name: wipe across the floor,  pattern: worldWipe,  params: { axis: 0, space: world, speedMM: 1200, spacingMM: 3000, widthMM: 600 } }
-    - { name: chase up each column,   pattern: ribbonChase, params: { loops: 2, speed: 0.2 } }
+    - { name: helix (barber pole),     pattern: helix,      params: { turns: 1, pitch: 3, speed: 0.5 } }
+    - { name: lantern carried through, pattern: lantern,    params: { path: eight, heightMM: 1200, speed: 25 } }
+    - { name: vortex over the floor,   pattern: swirl,      params: { arms: 2, spacingMM: 3000, twist: 1, wrap: 1 } }
+    - { name: drops,                   pattern: drops }
+    - { name: planes rising (world),   pattern: planeSweep, params: { speedMM: 400, spacingMM: 1200, widthMM: 250 } }
+    - { name: rings racing around,     pattern: helix,      params: { turns: 2, pitch: 0, speed: 1.5, width: 0.25, hue: 0.0, hueAlong: 0.6 } }

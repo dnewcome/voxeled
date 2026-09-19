@@ -148,7 +148,7 @@ See [interop/protocols.md](interop/protocols.md) for the protocol family.
 
 `show: { holdS, fadeS, scenes: [{ name, pattern, params }] }`. Patterns (`src/patterns.mjs`): `ribbonChase`
 (`loops`, `speed`, `sat`), `worldWipe` (`axis`, `speedMM`, `spacingMM`, `widthMM`, `space: world|fixture`, `hue`),
-`planeSweep` (`speedMM`, `spacingMM`, `widthMM`, `hue`), `normalRGB`, `spotlight` (visibility from an orbiting
+`planeSweep` (`speedMM`, `spacingMM`, `widthMM`, `hue`), `normalRGB`, **cylinder/volume**: `helix` (a barber-pole spiral winding around `v` as it climbs `s`: `turns`, `pitch`, `speed`, `width`, `hue`, `hueAlong`, `dir`), `lantern` (a point light carried through the room, lighting each LED by its **normal** — near sides glow, far sides dark: `path: orbit|eight`, `radiusMM`, `heightMM`, `speed`, `falloffMM`, `ambient`), `swirl` (spiral arms over the floor about the installation's centre, climbing and wrapping each column: `arms`, `spacingMM`, `speed`, `twist`, `wrap`), `drops` (drops falling down each column on one side, spinning: `rate`, `speed`, `lengthS`, `spin`), `spotlight` (visibility from an orbiting
 camera: `orbitDegPerSec`, `angleDeg`, `elevDeg`, `fovDeg`), `projector` (projection-map a texture). A pattern
 is `(pixel, t, ctx) → [r, g, b]` over the pixel's world position/normal — add your own in `patterns.mjs`.
 
